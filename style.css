@@ -11,3 +11,5 @@
 .cube-faces,.cube-faces button{touch-action:none;user-select:none;cursor:grab}.cube-faces.dragging,.cube-faces.dragging button{cursor:grabbing}
 
 .hole-help{font-size:12px;line-height:1.7;color:#826689;background:#f7f1fb;padding:9px;border-radius:6px}#hole{color:#98567c;background:#fbedf4}
+
+.sweep-options{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.sweep-options select,.sweep-options input[type=number]{padding:8px;border:1px solid #d6dbea;border-radius:6px;max-width:110px;font:inherit}#sweep-canvas{display:block;width:100%;height:auto;border:1px solid #dbe0ed;border-radius:8px;background:#f6f8fc;cursor:crosshair;touch-action:none}.path-label{display:block;margin-top:14px;font-size:13px}#sweep-path{display:block;width:100%;margin-top:6px;padding:8px;border:1px solid #d6dbea;border-radius:6px;font-size:14px}#sweep-error{color:#c94d67;min-height:20px}#sweep-create{background:#7655e9;color:white;width:100%}.toolbar #open-sweep{display:block;font-size:12px;color:#7354cf}
