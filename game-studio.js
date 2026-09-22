@@ -15,7 +15,7 @@ say("メッセージ")
 key_down("ArrowRight")
 touching(番号, 番号)
 get_x(番号) / get_y / get_z</pre><p>touching は外接する箱の重なり判定です。物理演算はありません。座標の取得・判定はフレーム開始時点です。</p></details></aside></div><p id="code-notice" role="status">準備しています…</p><div class="code-actions"><button id="save-game">↓ ゲームを保存</button><button id="load-game">ゲームを読み込む</button><input id="load-game-file" type="file" accept=".json" hidden><span>形と3種類のコードをまとめてJSON保存</span></div>`;
- document.body.append(dialog);
+ document.body.append(dialog);dialog.addEventListener('close',()=>{document.querySelector('main').inert=false;document.querySelector('header').inert=false;});
  const hud=document.createElement('div');hud.id='game-hud';hud.hidden=true;hud.innerHTML='<b id="game-score">得点：0</b><span id="game-message">準備中…</span><small>Escで停止</small>';$('#viewport').append(hud);
  let blocks,language='blocks',drafts={javascript:'',python:''},worker,busy=false,timer,tickTimer,running=false,keys=new Set(),before,oldSelection,cameraState,queuedKeys=[],last=0;
  const notice=message=>{$('#code-notice').textContent=message;};
@@ -38,7 +38,7 @@ get_x(番号) / get_y / get_z</pre><p>touching は外接する箱の重なり判
  dispatch({type:'init',language,code},language==='python'?60000:2000);last=performance.now();tickTimer=setInterval(()=>{if(busy)return;const now=performance.now(),dt=Math.min((now-last)/1000,.1);last=now;dispatch({type:'tick',dt,key:queuedKeys.shift()});},33);
  }
  const showLanguage=()=>{const isBlocks=language==='blocks';$('#block-editor').hidden=!isBlocks;$('#text-code').hidden=isBlocks;if(!isBlocks)$('#text-code').value=drafts[language];$('#code-convert').hidden=!isBlocks;if(isBlocks)requestAnimationFrame(()=>blocks.resize());};
- $('#open-code').onclick=()=>{list();dialog.showModal();showLanguage();};$('#close-code').onclick=()=>{stash();dialog.close();};dialog.addEventListener('cancel',stash);
+ $('#open-code').onclick=()=>{list();document.querySelector('main').inert=true;document.querySelector('header').inert=true;dialog.show();showLanguage();};$('#close-code').onclick=()=>{stash();dialog.close();};dialog.addEventListener('cancel',stash);
  $('#code-language').onchange=e=>{stash();language=e.target.value;showLanguage();};
  $('#code-example').onclick=()=>{const id=Math.max(1,objects.indexOf(bridge.getSelected())+1);if(language==='blocks')blocks.example(id);else{drafts[language]=language==='python'?`def start():\n    say("矢印キーで移動！")\non_start(start)\n\ndef update(dt):\n    if key_down("ArrowRight"):\n        move(${id}, 3 * dt, 0, 0)\n    if key_down("ArrowLeft"):\n        move(${id}, -3 * dt, 0, 0)\n    if key_down("ArrowUp"):\n        move(${id}, 0, 0, -3 * dt)\n    if key_down("ArrowDown"):\n        move(${id}, 0, 0, 3 * dt)\non_tick(update)\n\ndef point():\n    add_score(1)\non_key(" ", point)\n`:`on_start(() => say("矢印キーで移動！"));\non_tick(dt => {\n  if (key_down("ArrowRight")) move(${id}, 3 * dt, 0, 0);\n  if (key_down("ArrowLeft")) move(${id}, -3 * dt, 0, 0);\n  if (key_down("ArrowUp")) move(${id}, 0, 0, -3 * dt);\n  if (key_down("ArrowDown")) move(${id}, 0, 0, 3 * dt);\n});\non_key(" ", () => add_score(1));\n`;showLanguage();}notice('現在の原稿にサンプルを読み込みました。対象は形 '+id+'。テキスト版はスペースで得点。');};
  $('#code-convert').onclick=()=>{drafts.javascript=blocks.code();language='javascript';$('#code-language').value=language;showLanguage();notice('ブロックの内容をJavaScript欄へコピーしました。');};
