@@ -13,7 +13,7 @@ const make=(name,group,defaults,fields=[],extra={})=>({name,group,defaults,field
 const event=(name,defaults={},fields=[])=>make(name,'イベント',defaults,fields,{event:true});
 export const TYPES={
  start:event('開始したとき'),tick:event('毎フレーム'),key:event('キーを押したとき',{key:'ArrowRight'},[key]),keyup:event('キーを離したとき',{key:'ArrowRight'},[key]),keyheld:event('キーを押している間',{key:'ArrowRight'},[key]),keypress:event('文字キーを入力したとき',{key:'*'},[key]),
- pointer:event('マウス・タッチ・ドラッグ',{kind:'click',target:0,button:-1},[f('kind','操作','select',POINTER_EVENTS),f('target','対象（0＝画面全体）','eventTarget'),f('button','ボタン','select',[['すべて',-1],['左',0],['中',1],['右',2]])]),
+ pointer:event('マウス・タッチ・ドラッグ・押している間',{kind:'click',target:0,button:-1},[f('kind','操作','select',POINTER_EVENTS),f('target','対象（0＝画面全体）','eventTarget'),f('button','ボタン','select',[['すべて',-1],['左',0],['中',1],['右',2]])]),
  collision:event('接触したとき・離れたとき',{target:1,other:2,phase:'enter'},[target,other,f('phase','タイミング','select',[['触れ始めた','enter'],['触れている間','stay'],['離れた','exit'],['触れていない間','outside']])]),
  timer:event('時間が経過したとき',{name:'timer1',seconds:1,mode:'repeat'},[name,f('seconds','秒'),f('mode','実行','select',[['繰り返し','repeat'],['一度だけ','once']])]),
  condition_event:event('条件を満たしたとき',{...conditionDefaults,mode:'once'},[...conditionFields,f('mode','実行','select',[['成立した瞬間','once'],['成立している間','repeat']])]),
