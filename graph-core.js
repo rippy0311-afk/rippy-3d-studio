@@ -8,6 +8,9 @@ export function validateGraph(input,count=Infinity){
  const graph=structuredClone(input),ids=new Map();
  for(const n of graph.nodes){if(typeof n.id!=='string'||n.id.length>80||ids.has(n.id)||!own(TYPES,n.type)||!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>10000||Math.abs(n.y)>10000)throw Error('不正なノードです');ids.set(n.id,n);const def=TYPES[n.type];n.params={...def.defaults,...n.params};const p=n.params;
  for(const field of def.fields){const v=p[field.key];if(['number','value'].includes(field.kind)){checkValue(v);if(field.kind==='number'&&!binding(v)&&(!Number.isFinite(v)||Math.abs(v)>100000))throw Error('数値は -100000〜100000 にしてください');}
+ else if(field.kind==='setting'&&(!Number.isFinite(v)||v<0||v>1000||['distance','sensitivity'].includes(field.key)&&v<=0))throw Error('初期設定の数値は0〜1000（距離と感度は0より大きい値）です');
+ else if(field.kind==='playerTarget'&&(!Number.isInteger(v)||v<0||v>count))throw Error('プレイヤーを選び直してください');
+ else if(field.kind==='targets'&&(!Array.isArray(v)||v.some(id=>!Number.isInteger(id)||id<1||id>count)||new Set(v).size!==v.length))throw Error('操作対象を選び直してください');
  else if(field.kind==='select'&&!field.options.some(([,x])=>x===v))throw Error(def.name+'：選択肢を選んでください');
  else if(['target','eventTarget'].includes(field.kind)){const relevant=!(n.type==='branch'||n.type==='condition_event')||p.condition==='touching';if(relevant&&(!Number.isInteger(v)||v<(def.event?(field.kind==='eventTarget'?-1:0):-3)||field.kind==='target'&&v===0||v>count))throw Error(def.name+'：対象の形を選び直してください');}
  else if(field.kind==='boolean'&&typeof v!=='boolean')throw Error('チェックの設定が不正です');
@@ -15,6 +18,7 @@ export function validateGraph(input,count=Infinity){
  else if(['text','name'].includes(field.kind)&&(typeof v!=='string'||v.length>(field.kind==='name'?64:500)||field.kind==='name'&&!v.trim()))throw Error('名前やテキストを確認してください');
  }
  }
+ if(graph.nodes.filter(n=>n.type==='setup').length>1)throw Error('最初の定義は1個だけ配置してください');
  const used=new Set();for(const e of graph.edges){if(!ids.has(e.from)||!ids.has(e.to)||TYPES[ids.get(e.to).type].event||!outputs(ids.get(e.from)).includes(e.port)||used.has(e.from+':'+e.port))throw Error('接続が不正です');used.add(e.from+':'+e.port);}
  const active=new Set(),done=new Set();function visit(id){if(active.has(id))throw Error('線が一周しています。「くり返す」か「毎フレーム」を使ってください。');if(done.has(id))return;active.add(id);for(const e of graph.edges.filter(e=>e.from===id))visit(e.to);active.delete(id);done.add(id);}for(const id of ids.keys())visit(id);
  const names=new Set();for(const n of graph.nodes.filter(n=>n.type==='function')){if(names.has(n.params.name))throw Error('同じ名前の関数があります');names.add(n.params.name);}for(const n of graph.nodes.filter(n=>n.type==='call'))if(!names.has(n.params.name))throw Error('関数「'+n.params.name+'」を定義してください');
@@ -33,7 +37,7 @@ export class GraphRuntime{
  if(type==='pointer'&&(p.kind!==ctx.kind||p.target===-1&&!ctx.target||p.target>0&&p.target!==ctx.target||p.button!==-1&&p.button!==ctx.button))continue;
  queue(n,ctx);
  }};this.trigger=trigger;
- if(event==='start'){trigger('start');this.world.forEach((_,i)=>trigger('created',{target:i+1,created:i+1}));}
+ if(event==='start'){trigger('setup');trigger('start');this.world.forEach((_,i)=>trigger('created',{target:i+1,created:i+1}));}
  else if(event==='tick'){
   const due=this.pending.filter(p=>p.time<=this.time);this.pending=this.pending.filter(p=>p.time>this.time);this.jobs.push(...due.map(p=>({stack:p.stack})));
   for(const e of input.events??[]){if(e.type==='answer'){if(!this.prompts.has(e.token))continue;this.prompts.delete(e.token);this.setVar(e.name,e.value);trigger('answer',e);if(!this.prompts.size)trigger('all_answers',e);}else trigger(e.type,e);}
