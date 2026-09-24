@@ -25,7 +25,7 @@ export const TYPES={
  move:make('移動する','形',{target:1,x:1,y:0,z:0,perSecond:false},[...xyz,perSecond]),rotate:make('回転する','形',{target:1,x:0,y:15,z:0,perSecond:false},[...xyz,perSecond]),position:make('位置を設定','形',{target:1,x:0,y:0,z:0},xyz),
  color:make('色を変える','形',{target:1,color:'#ff5555'},[target,f('color','色','color')]),show:make('表示する','形',{target:1},[target]),hide:make('隠す','形',{target:1},[target]),clone:make('形を複製する','形',{target:1,x:1,y:0,z:0},xyz),
  score:make('得点を増やす','ゲーム',{amount:1},[amount]),say:make('メッセージを表示','ゲーム',{text:'ゲームスタート！'},[f('text','メッセージ','value')]),
- branch:make('条件分岐','条件',{...conditionDefaults,condition:'key'},conditionFields,{ports:['yes','no']}),
+ branch:make('if（もし〜なら）','条件',{...conditionDefaults,condition:'key'},conditionFields,{ports:['yes','no']}),
  variable:make('変数を設定・変更','変数・計算',{name:'value',mode:'set',value:0},[name,f('mode','操作','select',[['代入','set'],['加算','add'],['減算','subtract']]),value]),
  math:make('計算して変数に保存','変数・計算',{name:'result',a:0,op:'add',b:1},[name,f('a','値A','value'),f('op','計算','select',[['A＋B','add'],['A−B','subtract'],['A×B','multiply'],['A÷B','divide'],['A%B','mod'],['AのB乗','power'],['小さい方','min'],['大きい方','max'],['A〜Bの整数乱数','random'],['Aの四捨五入','round'],['Aの切り捨て','floor'],['Aの絶対値','abs'],['文字列をつなぐ','concat']]),f('b','値B','value')]),
  timer_control:make('タイマーを停止・再開','制御',{name:'timer1',mode:'stop'},[name,f('mode','操作','select',[['停止','stop'],['最初から再開','restart']])]),
