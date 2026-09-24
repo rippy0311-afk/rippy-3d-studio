@@ -19,13 +19,13 @@ export function validateGraph(input,count=Infinity){
  }
  }
  if(graph.nodes.filter(n=>n.type==='setup').length>1)throw Error('最初の定義は1個だけ配置してください');
- const used=new Set();for(const e of graph.edges){if(!ids.has(e.from)||!ids.has(e.to)||TYPES[ids.get(e.to).type].event||!outputs(ids.get(e.from)).includes(e.port)||used.has(e.from+':'+e.port))throw Error('接続が不正です');used.add(e.from+':'+e.port);}
+ const used=new Set();for(const e of graph.edges){if(!ids.has(e.from)||!ids.has(e.to)||TYPES[ids.get(e.to).type].event||!outputs(ids.get(e.from)).includes(e.port)||used.has(JSON.stringify([e.from,e.port,e.to])))throw Error('接続が不正です');used.add(JSON.stringify([e.from,e.port,e.to]));}
  const active=new Set(),done=new Set();function visit(id){if(active.has(id))throw Error('線が一周しています。「くり返す」か「毎フレーム」を使ってください。');if(done.has(id))return;active.add(id);for(const e of graph.edges.filter(e=>e.from===id))visit(e.to);active.delete(id);done.add(id);}for(const id of ids.keys())visit(id);
  const names=new Set();for(const n of graph.nodes.filter(n=>n.type==='function')){if(names.has(n.params.name))throw Error('同じ名前の関数があります');names.add(n.params.name);}for(const n of graph.nodes.filter(n=>n.type==='call'))if(!names.has(n.params.name))throw Error('関数「'+n.params.name+'」を定義してください');
  return graph;
 }
 export class GraphRuntime{
- constructor(graph,count){this.graph=validateGraph(graph,count);this.nodes=new Map(this.graph.nodes.map(n=>[n.id,n]));this.links=new Map(this.graph.edges.map(e=>[e.from+':'+e.port,e.to]));this.score=0;this.vars=new Map();this.time=0;this.pending=[];this.previous=new Map();this.timerNext=new Map();this.disabledTimers=new Set();this.prompts=new Set();this.promptSerial=0;this.functions=new Map(this.graph.nodes.filter(n=>n.type==='function').map(n=>[n.params.name,n]));}
+ constructor(graph,count){this.graph=validateGraph(graph,count);this.nodes=new Map(this.graph.nodes.map(n=>[n.id,n]));this.links=new Map();for(const e of this.graph.edges){const key=e.from+':'+e.port;this.links.set(key,[...(this.links.get(key)??[]),e.to]);}this.score=0;this.vars=new Map();this.time=0;this.pending=[];this.previous=new Map();this.timerNext=new Map();this.disabledTimers=new Set();this.prompts=new Set();this.promptSerial=0;this.functions=new Map(this.graph.nodes.filter(n=>n.type==='function').map(n=>[n.params.name,n]));}
  run(event,input){
  const {world,keys=[],dt=0}=input;this.world=structuredClone(world);this.keys=new Set(keys);this.dt=Math.max(0,Math.min(Number(dt)||0,.25));if(event==='tick')this.time+=this.dt;this.commands=[];this.jobs=[];this.steps=0;
  const queue=(n,ctx={})=>{this.jobs.push({stack:[{id:n.id,ctx:{time:this.time,dt:this.dt,...ctx}}]});};this.queue=queue;
@@ -51,7 +51,7 @@ export class GraphRuntime{
    if(n.type==='pointer'&&['held','hover'].includes(p.kind)){const pointer=input.pointer??{},matches=p.target===0?pointer.inside:p.target===-1?pointer.target>0:p.target===pointer.target;const down=p.button===-1?(pointer.buttons??[]).length:(pointer.buttons??[]).includes(p.button);if(matches&&(p.kind==='hover'||down))queue(n,{...pointer,button:p.button===-1?(pointer.buttons?.[0]??0):p.button});}
   }
  }else trigger(event,{...input});
- while(this.jobs.length){if(this.jobs.length>500)throw Error('同時イベントが多すぎます');const job=this.jobs.shift();while(job.stack.length){if(++this.steps>5000)throw Error('処理が多すぎます。関数や自作イベントの循環を確認してください');const task=job.stack.pop(),n=this.nodes.get(task.id),p=n.params,ctx=task.ctx;let next=this.links.get(n.id+':next');const push=(id,c=ctx)=>{if(id)job.stack.push({id,ctx:{...c}});};
+ while(this.jobs.length){if(this.jobs.length>500)throw Error('同時イベントが多すぎます');const job=this.jobs.shift();while(job.stack.length){if(++this.steps>5000)throw Error('処理が多すぎます。関数や自作イベントの循環を確認してください');const task=job.stack.pop(),n=this.nodes.get(task.id),p=n.params,ctx=task.ctx;let next=this.links.get(n.id+':next');const push=(target,c=ctx)=>{const ids=Array.isArray(target)?target:target?[target]:[];for(const id of [...ids].reverse())job.stack.push({id,ctx:{...c}});};
   if(n.type==='branch'){push(this.links.get(n.id+':'+(this.condition(p,ctx)?'yes':'no')));continue;}
   if(n.type==='repeat'){const count=this.number(p.count,ctx);if(!Number.isInteger(count)||count<0||count>1000)throw Error('繰り返し回数は0〜1000の整数です');push(next);for(let i=count-1;i>=0;i--)push(this.links.get(n.id+':body'),{...ctx,index:i});continue;}
   if(n.type==='wait'){const seconds=this.number(p.seconds,ctx);if(seconds<0||seconds>86400)throw Error('待機秒数は0〜86400です');push(next);if(job.stack.length){if(this.pending.length>=500)throw Error('待機中の処理が多すぎます');this.pending.push({time:this.time+Math.max(.001,seconds),stack:job.stack});}break;}
