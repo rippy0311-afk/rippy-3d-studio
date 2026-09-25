@@ -1,15 +1,15 @@
-import {initGameStudio} from './game-studio.js?v=20260925-wait1';
+import {initGameStudio} from './game-studio.js?v=20260925-motion2';
 import * as T from 'three';
-import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260925-wait1';
-import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260925-wait1';
-import {subtractObjects} from './solid-subtract.js?v=20260925-wait1';
-import {makeSweep} from './sweep-geometry.js?v=20260925-wait1';
-import {makeRevolve} from './revolve-geometry.js?v=20260925-wait1';
+import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260925-motion2';
+import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260925-motion2';
+import {subtractObjects} from './solid-subtract.js?v=20260925-motion2';
+import {makeSweep} from './sweep-geometry.js?v=20260925-motion2';
+import {makeRevolve} from './revolve-geometry.js?v=20260925-motion2';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {OBJExporter} from 'three/addons/exporters/OBJExporter.js';
-const $=s=>document.querySelector(s),viewport=$('#viewport'),objects=[],templates=new Map(),loader=new OBJLoader();let selected=null,catalog=[],category='すべて';
+const $=s=>document.querySelector(s),viewport=$('#viewport'),objects=[],templates=new Map(),loader=new OBJLoader();let gameStudio,selected=null,catalog=[],category='すべて';
 const selection=new Set(),selectionBoxes=[];let moveOrigin=new T.Vector3();
 const undoStack=[];let historyEnabled=false,editActive=false;
 function encode(o){const data={position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:o.visible,label:o.userData.label,pivotOffset:o.userData.pivotOffset};if(o.userData.isJoined)data.children=o.children.map(encode);else{data.id=o.userData.shapeId;if(o.userData.revolve)data.revolve=o.userData.revolve;if(o.userData.sweep)data.sweep=o.userData.sweep;if(o.userData.csg)data.geometry=o.geometry.toJSON();if(o.userData.sketch)data.sketch=o.userData.sketch;data.colors=[];o.traverse(c=>{if(c.isMesh)data.colors.push(c.material.color.getHex());});}return data;}
@@ -29,7 +29,7 @@ const transform=new TransformControls(camera,renderer.domElement);transform.setS
 const box=new T.BoxHelper(new T.Object3D(),0x9173f5);box.visible=false;scene.add(box);
 transform.addEventListener('mouseDown',()=>{remember();if(selected&&transform.getMode()==='translate'){moveOrigin.copy(selected.position);syncFields();}});
 new ResizeObserver(()=>{const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}).observe(viewport);
-renderer.setAnimationLoop(()=>{orbit.update();if(selected)box.setFromObject(selected);for(const helper of selectionBoxes)helper.update();renderer.render(scene,camera);});
+renderer.setAnimationLoop(()=>{orbit.update();if(selected)box.setFromObject(selected);for(const helper of selectionBoxes)helper.update();try{gameStudio?.beforeRender();renderer.render(scene,camera);}finally{gameStudio?.afterRender();}});
 const groups=[['position','位置','m'],['rotation','角度','°'],['scale','大きさ','倍率']];
 for(const [key,name,unit]of groups){const section=document.createElement('div');section.className='field-group';section.innerHTML=`<h3>${name}<span>${unit}</span></h3><div class="coords">${['x','y','z'].map(a=>`<label><span>${a.toUpperCase()}</span><input type="number" id="${key}-${a}" aria-label="${name} ${a.toUpperCase()}" step="${key==='rotation'?5:.1}" ${key==='scale'?'min="0.01"':''}></label>`).join('')}</div>`;$('#fields').append(section);for(const a of ['x','y','z'])$('#'+key+'-'+a).addEventListener('change',e=>{if(!selected)return;const val=Number(e.target.value);if(!Number.isFinite(val)||e.target.value===''||(key==='scale'&&val<=0)){syncFields();return;}if(key==='rotation')centerPivot(selected);selected[key][a]=key==='rotation'?T.MathUtils.degToRad(val):key==='position'?snapPosition(val):val;syncFields();});}
 for(const [key]of groups)for(const a of ['x','y','z'])$('#'+key+'-'+a).addEventListener('input',e=>{if(!selected||e.target.value==='')return;const n=Number(e.target.value);if(Number.isFinite(n)&&(key!=='scale'||n>0)){if(key==='rotation')centerPivot(selected);selected[key][a]=key==='rotation'?T.MathUtils.degToRad(n):n;}});
@@ -89,7 +89,7 @@ $('#search').oninput=renderCatalog;
 async function start(){catalog=await fetch('./catalog.json').then(r=>{if(!r.ok)throw Error('catalog');return r.json();});await Promise.all(catalog.map(async v=>{const g=await loader.loadAsync(v.file);templates.set(v.id,g);}));for(const name of ['すべて',...new Set(catalog.map(v=>v.category))]){const b=document.createElement('button');b.textContent=name;b.className=name===category?'active':'';b.onclick=()=>{category=name;$('#categories').querySelectorAll('button').forEach(v=>v.classList.toggle('active',v===b));renderCatalog();};$('#categories').append(b);}renderCatalog();$('#loading').hidden=true;
 const base=create('003',new T.Vector3(0,0,0));base.scale.set(3.8,2,3.8);base.traverse(c=>{if(c.isMesh)c.material.color.set('#b7a9f3');});const cube=create('001',new T.Vector3(-1.6,.27,0));cube.scale.set(.8,.8,.8);const cone=create('007',new T.Vector3(1.4,.27,-.6));cone.traverse(c=>{if(c.isMesh)c.material.color.set('#eac07a');});const ball=create('004',new T.Vector3(.8,.27,1.6));ball.scale.set(.65,.65,.65);ball.traverse(c=>{if(c.isMesh)c.material.color.set('#7fc7ba');});select(cube);$('#status').textContent='形を選んで、自由に組み立てよう';
 if(document.modelContext?.registerTool){try{await document.modelContext.registerTool({name:'add_shape',description:'ライブラリの形をワールドに追加する',inputSchema:{type:'object',properties:{id:{type:'string',pattern:'^[0-9]{3}$'}},required:['id'],additionalProperties:false},annotations:{readOnlyHint:false},execute:async input=>{if(typeof input?.id!=='string'||!templates.has(input.id))throw Error('Invalid shape id');const o=create(input.id);return {shapeId:o.userData.shapeId,count:objects.length};}});}catch(e){console.warn('WebMCP registration unavailable',e);}}
-historyEnabled=true;window.rippy={catalog,objects,create,select,scene,templates};initGameStudio({objects,scene,camera,renderer,orbit,encode,decode,select,refreshCount,remember,centerPivot,setEditing(value){historyEnabled=value;document.body.classList.toggle('playing',!value);},getSelected:()=>selected});}
+historyEnabled=true;window.rippy={catalog,objects,create,select,scene,templates};gameStudio=initGameStudio({objects,scene,camera,renderer,orbit,encode,decode,select,refreshCount,remember,centerPivot,setEditing(value){historyEnabled=value;document.body.classList.toggle('playing',!value);},getSelected:()=>selected});}
 start().catch(e=>{console.error(e);$('#loading').hidden=false;$('#loading').textContent='形の読み込みに失敗しました。ページを再読み込みしてください。';});
 
 

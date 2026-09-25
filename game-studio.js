@@ -1,9 +1,10 @@
+import {createGameMotion} from './game-motion.js?v=20260925-motion2';
 import * as T from 'three';
-import {createGraphEditor} from './graph-editor.js?v=20260925-wait1';
-import {validateGraph,TYPES} from './graph-core.js?v=20260925-wait1';
-import {createGameInput} from './game-input.js?v=20260925-wait1';
-import {createGameCamera} from './game-camera.js?v=20260925-wait1';
-import {createGameUI} from './game-ui.js?v=20260925-wait1';
+import {createGraphEditor} from './graph-editor.js?v=20260925-motion2';
+import {validateGraph,TYPES} from './graph-core.js?v=20260925-motion2';
+import {createGameInput} from './game-input.js?v=20260925-motion2';
+import {createGameCamera} from './game-camera.js?v=20260925-motion2';
+import {createGameUI} from './game-ui.js?v=20260925-motion2';
 export function initGameStudio(bridge){
  const $=s=>document.querySelector(s),{objects}=bridge;
  const dialog=document.createElement('dialog');dialog.id='code-dialog';dialog.setAttribute('aria-labelledby','code-title');
@@ -14,12 +15,13 @@ export function initGameStudio(bridge){
  const enqueue=e=>{if(!running)return;const last=events.at(-1);if(['mousemove','drag','touchmove'].includes(e.kind)&&last?.kind===e.kind&&last?.type===e.type&&last?.target===e.target){events[events.length-1]=e;return;}if(events.length>=500){stop('入力が多すぎるため停止しました');return;}events.push(e);};
  const gameInput=createGameInput(bridge.renderer?.domElement??$('#viewport'),objects,bridge.camera,enqueue,()=>stop());
  const gameCamera=createGameCamera(bridge.renderer?.domElement??$('#viewport'),objects,bridge.camera,bridge.orbit);
+ const gameMotion=createGameMotion();
  const gameUI=createGameUI($('#viewport'),enqueue);
  const debug=document.createElement('details');debug.id='game-debug';debug.hidden=true;debug.innerHTML='<summary>変数を見る</summary><pre></pre>';$('#viewport').append(debug);
  const notice=message=>{$('#code-notice').textContent=message;};
  const state=()=>objects.map(o=>{const box=new T.Box3().setFromObject(o);return{position:o.position.toArray(),visible:o.visible,min:box.min.toArray(),max:box.max.toArray()};});
  function stop(message='停止しました。編集時の状態に戻りました'){
- if(!running)return;running=false;clearTimeout(timer);clearInterval(tickTimer);worker?.terminate();worker=null;busy=false;events=[];gameCamera.stop();gameInput.stop();gameUI.clear();debug.hidden=true;
+ if(!running)return;running=false;clearTimeout(timer);clearInterval(tickTimer);worker?.terminate();worker=null;busy=false;events=[];gameMotion.clear();gameCamera.stop();gameInput.stop();gameUI.clear();debug.hidden=true;
  for(const o of objects.splice(before.length)){bridge.scene.remove(o);o.traverse(m=>{if(m.isMesh){m.material.dispose();if(m.userData.sketch||m.userData.csg||m.userData.sweep||m.userData.pivotOwned||m.userData.revolve)m.geometry.dispose();}});}
  objects.forEach((o,i)=>{const s=before[i];o.position.fromArray(s.position);o.rotation.fromArray(s.rotation);o.scale.fromArray(s.scale);o.visible=s.visible;let c=0;o.traverse(m=>{if(m.isMesh)m.material.color.setHex(s.colors[c++]);});});
  bridge.camera.position.copy(cameraState.position);bridge.orbit.target.copy(cameraState.target);bridge.orbit.enabled=cameraState.orbitEnabled;bridge.setEditing(true);bridge.select(oldSelection);bridge.refreshCount();$('#play-game').hidden=false;$('#stop-game').hidden=true;hud.hidden=true;$('#status').textContent=message;
@@ -29,9 +31,9 @@ export function initGameStudio(bridge){
  if(running)return;let graph;try{graph=graphEditor.validate();}catch(e){notice(e.message);$('#status').textContent=e.message;return;}
  oldSelection=bridge.getSelected();objects.forEach(bridge.centerPivot);before=objects.map(o=>{const colors=[];o.traverse(m=>{if(m.isMesh)colors.push(m.material.color.getHex());});return{position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:o.visible,colors};});cameraState={position:bridge.camera.position.clone(),target:bridge.orbit.target.clone(),orbitEnabled:bridge.orbit.enabled};
  bridge.select(null);bridge.setEditing(false);dialog.close();running=true;$('#status').textContent='プレイ中 — Escで停止';hud.hidden=false;$('#game-score').textContent='得点：0';$('#game-message').textContent='ゲーム開始';$('#play-game').hidden=true;$('#stop-game').hidden=false;bridge.orbit.enabled=false;gameInput.start();gameCamera.start(graph,gameInput.heldKeys);gameUI.clear();debug.hidden=false;debug.querySelector('pre').textContent='まだ変数はありません';
- worker=new Worker(new URL('./game-worker.js?v=20260925-wait1',import.meta.url),{type:'module'});
+ worker=new Worker(new URL('./game-worker.js?v=20260925-motion2',import.meta.url),{type:'module'});
  worker.onerror=e=>stop('実行エラー：'+e.message);
- worker.onmessage=({data})=>{if(!running)return;clearTimeout(timer);if(data.type==='error'){stop('ノードの実行エラー：'+data.message);notice(data.message);return;}try{for(const {type,args}of data.commands){const o=objects[args[0]-1];if(gameUI.apply(type,args))continue;if(type==='clone'){const clone=bridge.decode(bridge.encode(o));clone.position.add(new T.Vector3(...args.slice(2)));bridge.scene.add(clone);objects.push(clone);bridge.refreshCount();continue;}if(type==='score')$('#game-score').textContent='得点：'+args[0];else if(type==='say')$('#game-message').textContent=args[0];else if(o){if(type==='move')o.position.add(new T.Vector3(...args.slice(1)));if(type==='position')o.position.set(...args.slice(1));if(type==='rotate')for(const [i,a]of ['x','y','z'].entries())o.rotation[a]+=T.MathUtils.degToRad(args[i+1]);if(type==='visible')o.visible=args[1];if(type==='color')o.traverse(m=>{if(m.isMesh)m.material.color.set(args[1]);});}}}catch(e){stop('実行エラー：'+e.message);return;}debug.querySelector('pre').textContent=Object.entries(data.variables??{}).map(([name,value])=>name+' = '+String(value)).join('\n')||'まだ変数はありません';busy=false;};
+ worker.onmessage=({data})=>{if(!running)return;clearTimeout(timer);if(data.type==='error'){stop('ノードの実行エラー：'+data.message);notice(data.message);return;}try{for(const {type,args}of data.commands){const o=objects[args[0]-1];if(gameUI.apply(type,args))continue;if(type==='clone'){const clone=bridge.decode(bridge.encode(o));clone.position.add(new T.Vector3(...args.slice(2)));bridge.scene.add(clone);objects.push(clone);bridge.refreshCount();continue;}if(type==='score')$('#game-score').textContent='得点：'+args[0];else if(type==='say')$('#game-message').textContent=args[0];else if(o){if(type==='move'){const delta=args.slice(1);gameMotion.moved(o,delta);o.position.add(new T.Vector3(...delta));}if(type==='position'){const delta=args.slice(1).map((v,i)=>v-o.position.getComponent(i));gameMotion.moved(o,delta);o.position.set(...args.slice(1));}if(type==='rotate')for(const [i,a]of ['x','y','z'].entries())o.rotation[a]+=T.MathUtils.degToRad(args[i+1]);if(type==='visible')o.visible=args[1];if(type==='color')o.traverse(m=>{if(m.isMesh)m.material.color.set(args[1]);});}}}catch(e){stop('実行エラー：'+e.message);return;}debug.querySelector('pre').textContent=Object.entries(data.variables??{}).map(([name,value])=>name+' = '+String(value)).join('\n')||'まだ変数はありません';busy=false;};
  dispatch({type:'init',graph});last=performance.now();tickTimer=setInterval(()=>{if(busy)return;const now=performance.now(),dt=Math.min((now-last)/1000,.1);last=now;dispatch({type:'tick',dt});},33);
  }
  $('#open-code').textContent='◇ ノード';$('#open-code').onclick=()=>{dialog.showModal();graphEditor.refresh();};$('#close-code').onclick=()=>dialog.close();
@@ -41,4 +43,5 @@ export function initGameStudio(bridge){
  $('#save-game').onclick=()=>{const data={format:'rippy-game',version:3,items:objects.map(bridge.encode),graph:graphEditor.save()};const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='rippy-nodes-game.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notice('形とノードを保存しました。');};
  $('#load-game').onclick=()=>$('#load-game-file').click();$('#load-game-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>30000000)throw Error('30MB以下のファイルを選んでください');const data=JSON.parse(await file.text());if(data.format==='rippy-game'&&data.version===1)throw Error('旧ブロック・テキスト形式は読み込めません。元のファイルはそのまま保管してください。');if(data.format!=='rippy-game'||![2,3].includes(data.version)||!Array.isArray(data.items)||data.items.length>1000)throw Error('ノード方式で保存したゲームを選んでください');const graph=validateGraph(data.graph,data.items.length);const next=data.items.map(bridge.decode);bridge.remember();bridge.select(null);for(const o of objects)bridge.scene.remove(o);objects.splice(0,objects.length,...next);for(const o of next)bridge.scene.add(o);graphEditor.load(graph);bridge.refreshCount();notice('形とノードを読み込みました。プレイで実行できます。');}catch(error){notice('読み込み失敗：'+error.message);}e.target.value='';};
  graphEditor=createGraphEditor($('#node-editor'),()=>objects,notice);graphEditor.example(Math.min(2,objects.length)||1);$('#open-code').disabled=false;$('#play-game').disabled=false;
+ return {beforeRender(){if(running){gameMotion.beforeRender();gameCamera.update();}},afterRender(){if(running){gameMotion.afterRender();gameCamera.update();}}};
 }
