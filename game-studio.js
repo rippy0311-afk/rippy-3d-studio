@@ -1,9 +1,9 @@
 import * as T from 'three';
-import {createGraphEditor} from './graph-editor.js';
-import {validateGraph,TYPES} from './graph-core.js';
-import {createGameInput} from './game-input.js';
-import {createGameCamera} from './game-camera.js';
-import {createGameUI} from './game-ui.js';
+import {createGraphEditor} from './graph-editor.js?v=20260925-collision2';
+import {validateGraph,TYPES} from './graph-core.js?v=20260925-collision2';
+import {createGameInput} from './game-input.js?v=20260925-collision2';
+import {createGameCamera} from './game-camera.js?v=20260925-collision2';
+import {createGameUI} from './game-ui.js?v=20260925-collision2';
 export function initGameStudio(bridge){
  const $=s=>document.querySelector(s),{objects}=bridge;
  const dialog=document.createElement('dialog');dialog.id='code-dialog';dialog.setAttribute('aria-labelledby','code-title');
@@ -29,7 +29,7 @@ export function initGameStudio(bridge){
  if(running)return;let graph;try{graph=graphEditor.validate();}catch(e){notice(e.message);$('#status').textContent=e.message;return;}
  oldSelection=bridge.getSelected();objects.forEach(bridge.centerPivot);before=objects.map(o=>{const colors=[];o.traverse(m=>{if(m.isMesh)colors.push(m.material.color.getHex());});return{position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:o.visible,colors};});cameraState={position:bridge.camera.position.clone(),target:bridge.orbit.target.clone(),orbitEnabled:bridge.orbit.enabled};
  bridge.select(null);bridge.setEditing(false);dialog.close();running=true;$('#status').textContent='プレイ中 — Escで停止';hud.hidden=false;$('#game-score').textContent='得点：0';$('#game-message').textContent='ゲーム開始';$('#play-game').hidden=true;$('#stop-game').hidden=false;bridge.orbit.enabled=false;gameInput.start();gameCamera.start(graph);gameUI.clear();debug.hidden=false;debug.querySelector('pre').textContent='まだ変数はありません';
- worker=new Worker(new URL('./game-worker.js',import.meta.url),{type:'module'});
+ worker=new Worker(new URL('./game-worker.js?v=20260925-collision2',import.meta.url),{type:'module'});
  worker.onerror=e=>stop('実行エラー：'+e.message);
  worker.onmessage=({data})=>{if(!running)return;clearTimeout(timer);if(data.type==='error'){stop('ノードの実行エラー：'+data.message);notice(data.message);return;}try{for(const {type,args}of data.commands){const o=objects[args[0]-1];if(gameUI.apply(type,args))continue;if(type==='clone'){const clone=bridge.decode(bridge.encode(o));clone.position.add(new T.Vector3(...args.slice(2)));bridge.scene.add(clone);objects.push(clone);bridge.refreshCount();continue;}if(type==='score')$('#game-score').textContent='得点：'+args[0];else if(type==='say')$('#game-message').textContent=args[0];else if(o){if(type==='move')o.position.add(new T.Vector3(...args.slice(1)));if(type==='position')o.position.set(...args.slice(1));if(type==='rotate')for(const [i,a]of ['x','y','z'].entries())o.rotation[a]+=T.MathUtils.degToRad(args[i+1]);if(type==='visible')o.visible=args[1];if(type==='color')o.traverse(m=>{if(m.isMesh)m.material.color.set(args[1]);});}}}catch(e){stop('実行エラー：'+e.message);return;}debug.querySelector('pre').textContent=Object.entries(data.variables??{}).map(([name,value])=>name+' = '+String(value)).join('\n')||'まだ変数はありません';busy=false;};
  dispatch({type:'init',graph});last=performance.now();tickTimer=setInterval(()=>{if(busy)return;const now=performance.now(),dt=Math.min((now-last)/1000,.1);last=now;dispatch({type:'tick',dt});},33);
