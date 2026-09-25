@@ -30,7 +30,7 @@ export const TYPES={
  variable:make('変数を設定・変更','変数・計算',{name:'value',mode:'set',value:0},[name,f('mode','操作','select',[['代入','set'],['加算','add'],['減算','subtract']]),value]),
  math:make('計算して変数に保存','変数・計算',{name:'result',a:0,op:'add',b:1},[name,f('a','値A','value'),f('op','計算','select',[['A＋B','add'],['A−B','subtract'],['A×B','multiply'],['A÷B','divide'],['A%B','mod'],['AのB乗','power'],['小さい方','min'],['大きい方','max'],['A〜Bの整数乱数','random'],['Aの四捨五入','round'],['Aの切り捨て','floor'],['Aの絶対値','abs'],['文字列をつなぐ','concat']]),f('b','値B','value')]),
  timer_control:make('タイマーを停止・再開','制御',{name:'timer1',mode:'stop'},[name,f('mode','操作','select',[['停止','stop'],['最初から再開','restart']])]),
- repeat:make('指定回数くり返す','制御',{count:3},[f('count','回数')],{ports:['body','next']}),wait:make('待つ','制御',{seconds:1},[f('seconds','秒')]),
+ repeat:make('指定回数くり返す','制御',{count:3},[f('count','回数')],{ports:['body','next']}),wait:make('決めた秒数待つ','制御',{seconds:1},[f('seconds','秒')]),
  broadcast:make('自作イベントを送る','制御',{name:'event1',value:0},[name,value]),
  function:make('関数を定義','制御',{name:'function1'},[name],{event:true}),call:make('関数を呼ぶ','制御',{name:'function1',value:0},[name,value]),
  prompt:make('質問する','画面UI',{name:'answer',text:'名前を入力してください'},[name,f('text','質問文','value')]),
