@@ -1,10 +1,10 @@
-import {initGameStudio} from './game-studio.js?v=20260925-collision2';
+import {initGameStudio} from './game-studio.js?v=20260925-smooth1';
 import * as T from 'three';
-import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260925-collision2';
-import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260925-collision2';
-import {subtractObjects} from './solid-subtract.js?v=20260925-collision2';
-import {makeSweep} from './sweep-geometry.js?v=20260925-collision2';
-import {makeRevolve} from './revolve-geometry.js?v=20260925-collision2';
+import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260925-smooth1';
+import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260925-smooth1';
+import {subtractObjects} from './solid-subtract.js?v=20260925-smooth1';
+import {makeSweep} from './sweep-geometry.js?v=20260925-smooth1';
+import {makeRevolve} from './revolve-geometry.js?v=20260925-smooth1';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';

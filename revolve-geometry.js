@@ -1,4 +1,4 @@
-import * as T from 'three';import {validateFace} from './sketch-geometry.js?v=20260925-collision2';
+import * as T from 'three';import {validateFace} from './sketch-geometry.js?v=20260925-smooth1';
 export function makeRevolve({profile,angle=360}){
  const error=validateFace(profile);if(error)throw Error(error);if(!Number.isFinite(angle)||angle<=0||angle>360)throw Error('回転角度は0より大きく360°以下にしてください。');if(profile.some(([r,y])=>r<0||Math.abs(r)>10000||Math.abs(y)>10000))throw Error('断面は軸の右側（半径0以上）に描いてください。');
  const points=profile.map(p=>[...p]);const area=points.reduce((sum,p,i)=>{const q=points[(i+1)%points.length];return sum+p[0]*q[1]-q[0]*p[1];},0);if(area<0)points.reverse();

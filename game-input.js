@@ -17,5 +17,5 @@ export function createGameInput(canvas,objects,camera,emit,onStop){
  canvas.addEventListener('dblclick',e=>{if(active&&!lastDrag)send('dblclick',{button:e.button});});
  canvas.addEventListener('wheel',e=>{if(active){e.preventDefault();client=[e.clientX,e.clientY];refresh();send('wheel',{wheel:e.deltaY,button:0});}},{passive:false});
  canvas.addEventListener('contextmenu',e=>{if(active)e.preventDefault();});
- const api={start(){active=true;keys.clear();buttons.clear();pointer={inside:false,target:0,x:0,y:0,dx:0,dy:0};client=null;down=null;canvas.tabIndex=0;canvas.focus();},stop(){active=false;keys.clear();buttons.clear();down=null;},snapshot(){refresh();return{keys:[...keys],pointer:{...pointer,buttons:[...buttons]}};}};return api;
+ const api={heldKeys:()=>[...keys],start(){active=true;keys.clear();buttons.clear();pointer={inside:false,target:0,x:0,y:0,dx:0,dy:0};client=null;down=null;canvas.tabIndex=0;canvas.focus();},stop(){active=false;keys.clear();buttons.clear();down=null;},snapshot(){refresh();return{keys:[...keys],pointer:{...pointer,buttons:[...buttons]}};}};return api;
 }
