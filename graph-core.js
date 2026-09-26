@@ -1,6 +1,6 @@
-import {collisionDelta} from './game-collision.js?v=20260925-ui1';
-import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260925-ui1';
-export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260925-ui1';
+import {collisionDelta} from './game-collision.js?v=20260925-ui2';
+import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260925-ui2';
+export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260925-ui2';
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const binding=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function checkValue(v){if(binding(v)){if(!['variable','event','object'].includes(v.source))throw Error('値の参照先が不正です');if(v.source==='variable'&&(typeof v.name!=='string'||!v.name.length||v.name.length>64))throw Error('変数名を指定してください');if(v.source==='event'&&!CONTEXT.some(([,key])=>key===v.field))throw Error('イベントの値を選んでください');if(v.source==='object'&&(!Number.isInteger(v.target)||v.target===0||v.target< -3||!['x','y','z'].includes(v.field)))throw Error('形の座標の参照が不正です');}else if(!['number','string','boolean'].includes(typeof v)||typeof v==='number'&&(!Number.isFinite(v)||Math.abs(v)>1e9)||typeof v==='string'&&v.length>500)throw Error('値が不正です（文字は500字以内）');}

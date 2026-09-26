@@ -1,5 +1,5 @@
-import {placeUI} from './ui-layout.js?v=20260925-ui1';
-import {UI_EVENTS} from './graph-schema.js?v=20260925-ui1';
+import {placeUI} from './ui-layout.js?v=20260925-ui2';
+import {UI_EVENTS} from './graph-schema.js?v=20260925-ui2';
 export function createGameUI(viewport,emit){
  const layer=document.createElement('div');layer.id='game-ui';layer.hidden=true;viewport.append(layer);const controls=new Map(),prompts=new Map(),layouts=new Map();const flow=document.createElement('div');flow.className='game-ui-flow';layer.append(flow);
  const notify=(kind,id,e,control)=>{const r=viewport.getBoundingClientRect();emit({type:'ui_event',kind,ui:id,value:control.type==='checkbox'?control.checked:control.type==='range'||control.type==='number'?Number(control.value):control.value??control.textContent,key:e.key?.toLowerCase(),x:(e.clientX??r.left)-r.left,y:(e.clientY??r.top)-r.top,button:e.button??0,wheel:e.deltaY??0});};
