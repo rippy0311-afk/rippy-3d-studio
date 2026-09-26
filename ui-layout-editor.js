@@ -1,4 +1,4 @@
-import {UI_KINDS,validateUILayout,placeUI,overlapsUI,freeUIPosition} from './ui-layout.js?v=20260925-ui2';
+import {UI_KINDS,validateUILayout,placeUI,overlapsUI,freeUIPosition} from './ui-layout.js?v=20260926-studio1';
 export function createUILayoutEditor(viewport,inspector,onToggle,onSave=()=>{}){
  let items=[],selected=null,active=false,history=[],drag=null;
  const layer=document.createElement('div');layer.id='ui-design-layer';layer.hidden=true;viewport.append(layer);

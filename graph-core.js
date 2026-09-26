@@ -1,13 +1,13 @@
-import {collisionDelta} from './game-collision.js?v=20260925-ui2';
-import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260925-ui2';
-export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260925-ui2';
+import {collisionDelta} from './game-collision.js?v=20260926-studio1';
+import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260926-studio1';
+export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260926-studio1';
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const binding=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function checkValue(v){if(binding(v)){if(!['variable','event','object'].includes(v.source))throw Error('値の参照先が不正です');if(v.source==='variable'&&(typeof v.name!=='string'||!v.name.length||v.name.length>64))throw Error('変数名を指定してください');if(v.source==='event'&&!CONTEXT.some(([,key])=>key===v.field))throw Error('イベントの値を選んでください');if(v.source==='object'&&(!Number.isInteger(v.target)||v.target===0||v.target< -3||!['x','y','z'].includes(v.field)))throw Error('形の座標の参照が不正です');}else if(!['number','string','boolean'].includes(typeof v)||typeof v==='number'&&(!Number.isFinite(v)||Math.abs(v)>1e9)||typeof v==='string'&&v.length>500)throw Error('値が不正です（文字は500字以内）');}
 export function validateGraph(input,count=Infinity){
  if(!input||!Array.isArray(input.nodes)||!Array.isArray(input.edges)||input.nodes.length>300||input.edges.length>600)throw Error('ノードは300個までです。正しい保存ファイルを選んでください。');
  const graph=structuredClone(input),ids=new Map();
- for(const n of graph.nodes){if(typeof n.id!=='string'||n.id.length>80||ids.has(n.id)||!own(TYPES,n.type)||!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>10000||Math.abs(n.y)>10000)throw Error('不正なノードです');ids.set(n.id,n);const def=TYPES[n.type];n.params={...def.defaults,...n.params};const p=n.params;
+ for(const n of graph.nodes){try{if(typeof n.id!=='string'||n.id.length>80||ids.has(n.id)||!own(TYPES,n.type)||!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>10000||Math.abs(n.y)>10000)throw Error('不正なノードです');ids.set(n.id,n);const def=TYPES[n.type];n.params={...def.defaults,...n.params};const p=n.params;
  for(const field of def.fields){const v=p[field.key];if(['number','value'].includes(field.kind)){checkValue(v);if(field.kind==='number'&&!binding(v)&&(!Number.isFinite(v)||Math.abs(v)>100000))throw Error('数値は -100000〜100000 にしてください');}
  else if(field.kind==='setting'&&(!Number.isFinite(v)||v<0||v>1000||['distance','sensitivity'].includes(field.key)&&v<=0))throw Error('初期設定の数値は0〜1000（距離と感度は0より大きい値）です');
  else if(field.kind==='playerTarget'&&(!Number.isInteger(v)||v<0||v>count))throw Error('プレイヤーを選び直してください');
@@ -18,6 +18,7 @@ export function validateGraph(input,count=Infinity){
  else if(field.kind==='color'&&!/^#[0-9a-f]{6}$/i.test(v))throw Error('色が不正です');
  else if(['text','name'].includes(field.kind)&&(typeof v!=='string'||v.length>(field.kind==='name'?64:500)||field.kind==='name'&&!v.trim()))throw Error('名前やテキストを確認してください');
  }
+ }catch(error){error.nodeId=n.id;throw error;}
  }
  if(graph.nodes.filter(n=>n.type==='setup').length>1)throw Error('最初の定義は1個だけ配置してください');
  const used=new Set();for(const e of graph.edges){if(!ids.has(e.from)||!ids.has(e.to)||TYPES[ids.get(e.to).type].event||!outputs(ids.get(e.from)).includes(e.port)||used.has(JSON.stringify([e.from,e.port,e.to])))throw Error('接続が不正です');used.add(JSON.stringify([e.from,e.port,e.to]));}
@@ -28,7 +29,7 @@ export function validateGraph(input,count=Infinity){
 export class GraphRuntime{
  constructor(graph,count){this.graph=validateGraph(graph,count);this.nodes=new Map(this.graph.nodes.map(n=>[n.id,n]));this.links=new Map();for(const e of this.graph.edges){const key=e.from+':'+e.port;this.links.set(key,[...(this.links.get(key)??[]),e.to]);}this.collision=this.graph.nodes.find(n=>n.type==='setup')?.params.collision??true;this.score=0;this.vars=new Map();this.time=0;this.pending=[];this.previous=new Map();this.timerNext=new Map();this.disabledTimers=new Set();this.prompts=new Set();this.promptSerial=0;this.functions=new Map(this.graph.nodes.filter(n=>n.type==='function').map(n=>[n.params.name,n]));}
  run(event,input){
- const {world,keys=[],dt=0}=input;this.world=structuredClone(world);this.keys=new Set(keys);this.dt=Math.max(0,Math.min(Number(dt)||0,.25));if(event==='tick')this.time+=this.dt;this.commands=[];this.jobs=[];this.steps=0;
+ const {world,keys=[],dt=0}=input;this.world=structuredClone(world);this.keys=new Set(keys);this.dt=Math.max(0,Math.min(Number(dt)||0,.25));if(event==='tick')this.time+=this.dt;this.commands=[];this.jobs=[];this.steps=0;this.trace=[];this.traceEdges=[];this.activeNode=null;
  const queue=(n,ctx={})=>{this.jobs.push({stack:[{id:n.id,ctx:{time:this.time,dt:this.dt,...ctx}}]});};this.queue=queue;
  const trigger=(type,ctx={})=>{for(const n of this.graph.nodes){if(n.type!==type)continue;const p=n.params;
  if(['key','keyup','keypress'].includes(type)&&p.key!=='*'&&p.key.toLowerCase()!==String(ctx.key).toLowerCase())continue;
@@ -52,7 +53,7 @@ export class GraphRuntime{
    if(n.type==='pointer'&&['held','hover'].includes(p.kind)){const pointer=input.pointer??{},matches=p.target===0?pointer.inside:p.target===-1?pointer.target>0:p.target===pointer.target;const down=p.button===-1?(pointer.buttons??[]).length:(pointer.buttons??[]).includes(p.button);if(matches&&(p.kind==='hover'||down))queue(n,{...pointer,button:p.button===-1?(pointer.buttons?.[0]??0):p.button});}
   }
  }else trigger(event,{...input});
- while(this.jobs.length){if(this.jobs.length>500)throw Error('同時イベントが多すぎます');const job=this.jobs.shift();while(job.stack.length){if(++this.steps>5000)throw Error('処理が多すぎます。関数や自作イベントの循環を確認してください');const task=job.stack.pop(),n=this.nodes.get(task.id),p=n.params,ctx=task.ctx;let next=this.links.get(n.id+':next');const push=(target,c=ctx)=>{const ids=Array.isArray(target)?target:target?[target]:[];for(const id of [...ids].reverse())job.stack.push({id,ctx:{...c}});};
+ while(this.jobs.length){if(this.jobs.length>500)throw Error('同時イベントが多すぎます');const job=this.jobs.shift();while(job.stack.length){if(++this.steps>5000)throw Error('処理が多すぎます。関数や自作イベントの循環を確認してください');const task=job.stack.pop(),n=this.nodes.get(task.id),p=n.params,ctx=task.ctx;this.activeNode=n.id;if(this.trace.length<300)this.trace.push(n.id);let next=this.links.get(n.id+':next');const push=(target,c=ctx)=>{const ids=Array.isArray(target)?target:target?[target]:[];for(const id of [...ids].reverse()){if(this.traceEdges.length<600)this.traceEdges.push([n.id,id]);job.stack.push({id,ctx:{...c}});}};
   if(n.type==='branch'){push(this.links.get(n.id+':'+(this.condition(p,ctx)?'yes':'no')));continue;}
   if(n.type==='repeat'){const count=this.number(p.count,ctx);if(!Number.isInteger(count)||count<0||count>1000)throw Error('繰り返し回数は0〜1000の整数です');push(next);for(let i=count-1;i>=0;i--)push(this.links.get(n.id+':body'),{...ctx,index:i});continue;}
   if(n.type==='wait'){const seconds=this.number(p.seconds,ctx);if(seconds<0||seconds>86400)throw Error('待機秒数は0〜86400です');push(next);if(job.stack.length){if(this.pending.length>=500)throw Error('待機中の処理が多すぎます');this.pending.push({time:this.time+Math.max(.001,seconds),stack:job.stack});}break;}
@@ -73,7 +74,7 @@ export class GraphRuntime{
  }}
  return this.commands;
  }
- emit(type,...args){if(this.commands.length>=1000)throw Error('1フレームの処理が多すぎます');this.commands.push({type,args});}
+ emit(type,...args){if(this.commands.length>=1000)throw Error('1フレームの処理が多すぎます');this.commands.push({type,args,nodeId:this.activeNode});}
  object(id){const o=this.world[id-1];if(!o)throw Error('対象の形がありません');return o;}
  target(id,ctx){const resolved=id===-1?ctx.target:id===-2?ctx.other:id===-3?ctx.created:id;this.object(resolved);return resolved;}
  num(v){const n=Number(v);if(!Number.isFinite(n)||Math.abs(n)>1e9)throw Error('計算結果が大きすぎるか、数値ではありません');return n;}

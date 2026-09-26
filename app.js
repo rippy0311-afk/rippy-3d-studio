@@ -1,10 +1,10 @@
-import {initGameStudio} from './game-studio.js?v=20260925-ui2';
+import {initGameStudio} from './game-studio.js?v=20260926-studio1';
 import * as T from 'three';
-import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260925-ui2';
-import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260925-ui2';
-import {subtractObjects} from './solid-subtract.js?v=20260925-ui2';
-import {makeSweep} from './sweep-geometry.js?v=20260925-ui2';
-import {makeRevolve} from './revolve-geometry.js?v=20260925-ui2';
+import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260926-studio1';
+import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260926-studio1';
+import {subtractObjects} from './solid-subtract.js?v=20260926-studio1';
+import {makeSweep} from './sweep-geometry.js?v=20260926-studio1';
+import {makeRevolve} from './revolve-geometry.js?v=20260926-studio1';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
@@ -89,7 +89,7 @@ $('#search').oninput=renderCatalog;
 async function start(){catalog=await fetch('./catalog.json').then(r=>{if(!r.ok)throw Error('catalog');return r.json();});await Promise.all(catalog.map(async v=>{const g=await loader.loadAsync(v.file);templates.set(v.id,g);}));for(const name of ['すべて',...new Set(catalog.map(v=>v.category))]){const b=document.createElement('button');b.textContent=name;b.className=name===category?'active':'';b.onclick=()=>{category=name;$('#categories').querySelectorAll('button').forEach(v=>v.classList.toggle('active',v===b));renderCatalog();};$('#categories').append(b);}renderCatalog();$('#loading').hidden=true;
 const base=create('003',new T.Vector3(0,0,0));base.scale.set(3.8,2,3.8);base.traverse(c=>{if(c.isMesh)c.material.color.set('#b7a9f3');});const cube=create('001',new T.Vector3(-1.6,.27,0));cube.scale.set(.8,.8,.8);const cone=create('007',new T.Vector3(1.4,.27,-.6));cone.traverse(c=>{if(c.isMesh)c.material.color.set('#eac07a');});const ball=create('004',new T.Vector3(.8,.27,1.6));ball.scale.set(.65,.65,.65);ball.traverse(c=>{if(c.isMesh)c.material.color.set('#7fc7ba');});select(cube);$('#status').textContent='形を選んで、自由に組み立てよう';
 if(document.modelContext?.registerTool){try{await document.modelContext.registerTool({name:'add_shape',description:'ライブラリの形をワールドに追加する',inputSchema:{type:'object',properties:{id:{type:'string',pattern:'^[0-9]{3}$'}},required:['id'],additionalProperties:false},annotations:{readOnlyHint:false},execute:async input=>{if(typeof input?.id!=='string'||!templates.has(input.id))throw Error('Invalid shape id');const o=create(input.id);return {shapeId:o.userData.shapeId,count:objects.length};}});}catch(e){console.warn('WebMCP registration unavailable',e);}}
-historyEnabled=true;window.rippy={catalog,objects,create,select,scene,templates};gameStudio=initGameStudio({objects,scene,camera,renderer,orbit,encode,decode,select,refreshCount,remember,centerPivot,setEditing(value){historyEnabled=value;document.body.classList.toggle('playing',!value);},getSelected:()=>selected});}
+historyEnabled=true;window.rippy={catalog,objects,create,select,scene,templates};gameStudio=initGameStudio({objects,scene,camera,renderer,orbit,encode,decode,select,refreshCount,remember,centerPivot,setEditing(value){historyEnabled=value;document.body.classList.toggle('playing',!value);},getSelected:()=>selected,getSelection:()=>[...selection],resetHistory:()=>{undoStack.length=0;}});}
 start().catch(e=>{console.error(e);$('#loading').hidden=false;$('#loading').textContent='形の読み込みに失敗しました。ページを再読み込みしてください。';});
 
 

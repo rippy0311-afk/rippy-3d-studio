@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {validateFace} from './sketch-geometry.js?v=20260925-ui2';
+import {validateFace} from './sketch-geometry.js?v=20260926-studio1';
 export function makeSweep({profile,path,smooth=true}){
  const error=validateFace(profile);if(error)throw Error('断面：'+error);
  if(!Array.isArray(path)||path.length<2||path.length>100)throw Error('経路は2〜100点で指定してください。');
