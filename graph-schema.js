@@ -16,7 +16,7 @@ export const TYPES={
  start:event('開始したとき'),tick:event('毎フレーム'),key:event('キーを押したとき',{key:'ArrowRight'},[key]),keyup:event('キーを離したとき',{key:'ArrowRight'},[key]),keyheld:event('キーを押している間',{key:'ArrowRight'},[key]),keypress:event('文字キーを入力したとき',{key:'*'},[key]),
  pointer:event('マウス・タッチ・ドラッグ・押している間',{kind:'click',target:0,button:-1},[f('kind','操作','select',POINTER_EVENTS),f('target','対象（0＝画面全体）','eventTarget'),f('button','ボタン','select',[['すべて',-1],['左',0],['中',1],['右',2]])]),
  collision:event('接触したとき・離れたとき',{target:1,other:2,phase:'enter'},[target,other,f('phase','タイミング','select',[['触れ始めた','enter'],['触れている間','stay'],['離れた','exit'],['触れていない間','outside']])]),
- timer:event('時間が経過したとき',{name:'timer1',seconds:1,mode:'repeat'},[name,f('seconds','秒'),f('mode','実行','select',[['繰り返し','repeat'],['一度だけ','once']])]),
+ timer:event('Timer：時間が経過したとき',{name:'timer1',seconds:1,mode:'repeat'},[f('name','タイマー名','name'),f('seconds','実行間隔（秒）'),f('mode','実行方法','select',[['指定した秒数ごとに繰り返す','repeat'],['指定した秒数後に1回だけ','once']])]),
  condition_event:event('条件を満たしたとき',{...conditionDefaults,mode:'once'},[...conditionFields,f('mode','実行','select',[['成立した瞬間','once'],['成立している間','repeat']])]),
  ui_event:event('画面のUIを操作したとき',{ui:'button1',kind:'click'},[f('ui','UIのID（*＝すべて）','name'),f('kind','操作','select',UI_EVENTS)]),
  message_event:event('自作イベントを受け取ったとき',{name:'event1'},[name]),

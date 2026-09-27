@@ -1,6 +1,6 @@
 import * as T from 'three';
-import {validateGraph,TYPES} from './graph-core.js?v=20260927-lock1';
-import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-lock1';
+import {validateGraph,TYPES} from './graph-core.js?v=20260927-timer1';
+import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-timer1';
 export function validateKit(data){
  if(!data||data.format!=='rippy-kit'||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>1000)throw Error('部品セットのファイルを選んでください');
  return {...structuredClone(data),graph:validateGraph(data.graph,data.items.length),uiLayout:validateUILayout(data.uiLayout)};
@@ -11,7 +11,7 @@ export function mergeKit(existing,kit,prefix){
  const rename=v=>v==='*'?v:prefix+v;
  const nodes=kit.graph.nodes.map(node=>{const n=structuredClone(node);n.id=prefix+n.id;n.x=Math.min(3500,n.x+60);n.y=Math.min(2000,n.y+60);
   if(n.type==='setup'&&hasSetup){n.type='start';n.params={};return n;}
-  for(const field of TYPES[n.type].fields){const k=field.key,v=n.params[k];if(['target','eventTarget','playerTarget'].includes(field.kind)&&v>0)n.params[k]=v+offset;else if(field.kind==='targets')n.params[k]=v.map(id=>id+offset);else if(v&&typeof v==='object'){if(v.source==='object')v.target=v.target>0?v.target+offset:v.target;if(v.source==='variable')v.name=rename(v.name);}
+  for(const field of TYPES[n.type].fields){const k=field.key,v=n.params[k];if(['target','eventTarget','playerTarget'].includes(field.kind)&&v>0)n.params[k]=v+offset;else if(field.kind==='targets')n.params[k]=v.map(id=>id+offset);else if(v&&typeof v==='object'){if(v.source==='object')v.target=v.target>0?v.target+offset:v.target;if(['variable','timer'].includes(v.source))v.name=rename(v.name);}
    if(['name','ui'].includes(k)&&typeof v==='string')n.params[k]=rename(v);
   }
   return n;
@@ -58,7 +58,7 @@ export function captureKit(scene,selectedIds){
  const ids=new Set(selectedIds),graph=validateGraph(scene.graph,scene.items.length),picked=new Set();
  const references=n=>{const refs=[];for(const f of TYPES[n.type].fields){const v=n.params[f.key];if(['target','eventTarget','playerTarget'].includes(f.kind)&&v>0)refs.push(v);if(f.kind==='targets')refs.push(...v);if(v?.source==='object'&&v.target>0)refs.push(v.target);}return refs;};
  let changed=true;while(changed){changed=false;for(const n of graph.nodes){if(n.type==='setup')continue;const connected=graph.edges.some(e=>e.from===n.id&&picked.has(e.to)||e.to===n.id&&picked.has(e.from));if(!picked.has(n.id)&&(connected||references(n).some(id=>ids.has(id)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
-  for(const n of graph.nodes){if(n.type==='setup'||picked.has(n.id))continue;const names=node=>{const a=[];if(typeof node.params.name==='string')a.push(node.params.name);for(const v of Object.values(node.params))if(v?.source==='variable')a.push(v.name);return a;};if([...picked].some(id=>names(graph.nodes.find(n=>n.id===id)).some(name=>names(n).includes(name)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
+  for(const n of graph.nodes){if(n.type==='setup'||picked.has(n.id))continue;const names=node=>{const a=[];if(typeof node.params.name==='string')a.push(node.params.name);for(const v of Object.values(node.params))if(v&&['variable','timer'].includes(v.source))a.push(v.name);return a;};if([...picked].some(id=>names(graph.nodes.find(n=>n.id===id)).some(name=>names(n).includes(name)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
  }
  const order=[...ids].sort((a,b)=>a-b),mapping=new Map(order.map((id,i)=>[id,i+1]));const nodes=graph.nodes.filter(n=>picked.has(n.id));
  for(const n of nodes)for(const f of TYPES[n.type].fields){const v=n.params[f.key];if(['target','eventTarget','playerTarget'].includes(f.kind)&&v>0)n.params[f.key]=mapping.get(v);if(v?.source==='object'&&v.target>0)v.target=mapping.get(v.target);}
