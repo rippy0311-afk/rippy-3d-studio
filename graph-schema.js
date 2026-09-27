@@ -23,7 +23,7 @@ export const TYPES={
  variable_event:event('変数が変わったとき',{name:'value'},[name]),
  created:event('形が作成されたとき',{target:0},[f('target','対象（0＝すべて）','eventTarget')]),
  answer:event('質問に回答したとき',{name:'answer'},[name]),all_answers:event('すべての質問に回答したとき'),
- move:make('移動する','形',{target:1,x:1,y:0,z:0,perSecond:false},[...xyz,perSecond]),rotate:make('回転する','形',{target:1,x:0,y:15,z:0,perSecond:false},[...xyz,perSecond]),position:make('位置を設定','形',{target:1,x:0,y:0,z:0},xyz),
+ move:make('移動する','形',{target:1,x:1,y:0,z:0,perSecond:false,space:'world'},[target,f('space','座標の基準','select',[['ワールド座標','world'],['ローカル座標（対象の向き）','local']]),...xyz.slice(1),perSecond]),rotate:make('回転する','形',{target:1,x:0,y:15,z:0,perSecond:false},[...xyz,perSecond]),position:make('位置を設定','形',{target:1,x:0,y:0,z:0},xyz),
  color:make('色を変える','形',{target:1,color:'#ff5555'},[target,f('color','色','color')]),show:make('表示する','形',{target:1},[target]),hide:make('隠す','形',{target:1},[target]),clone:make('形を複製する','形',{target:1,x:1,y:0,z:0},xyz),
  score:make('得点を増やす','ゲーム',{amount:1},[amount]),say:make('メッセージを表示','ゲーム',{text:'ゲームスタート！'},[f('text','メッセージ','value')]),
  branch:make('if（もし〜なら）','条件',{...conditionDefaults,condition:'key'},conditionFields,{ports:['yes','no']}),

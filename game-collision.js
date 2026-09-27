@@ -69,7 +69,7 @@ export function collidersTouch(a,b){
 }
 
 export function rotateCollider(o,degrees){
- if(!o.triangles||!o.rotation)return;
+ if(!o.triangles){o.rotation=(o.rotation??[0,0,0]).map((v,i)=>v+degrees[i]*Math.PI/180);return;}if(!o.rotation)return;
  const old=o.rotation,next=old.map((v,i)=>v+degrees[i]*Math.PI/180);
  function turn(p,axis,angle){const i=(axis+1)%3,j=(axis+2)%3,c=Math.cos(angle),s=Math.sin(angle),a=p[i],b=p[j];p[i]=a*c-b*s;p[j]=a*s+b*c;}
  o.min=[Infinity,Infinity,Infinity];o.max=[-Infinity,-Infinity,-Infinity];

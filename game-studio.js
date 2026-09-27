@@ -1,15 +1,15 @@
-import {collisionDelta} from './game-collision.js?v=20260927-guides1';
-import {colliderState} from './game-collider.js?v=20260927-guides1';
-import {createGameLibrary} from './game-library.js?v=20260927-guides1';
-import {createUILayoutEditor} from './ui-layout-editor.js?v=20260927-guides1';
-import {validateUILayout} from './ui-layout.js?v=20260927-guides1';
-import {createGameMotion} from './game-motion.js?v=20260927-guides1';
+import {collisionDelta} from './game-collision.js?v=20260927-local1';
+import {colliderState} from './game-collider.js?v=20260927-local1';
+import {createGameLibrary} from './game-library.js?v=20260927-local1';
+import {createUILayoutEditor} from './ui-layout-editor.js?v=20260927-local1';
+import {validateUILayout} from './ui-layout.js?v=20260927-local1';
+import {createGameMotion} from './game-motion.js?v=20260927-local1';
 import * as T from 'three';
-import {createGraphEditor} from './graph-editor.js?v=20260927-guides1';
-import {validateGraph,TYPES} from './graph-core.js?v=20260927-guides1';
-import {createGameInput} from './game-input.js?v=20260927-guides1';
-import {createGameCamera} from './game-camera.js?v=20260927-guides1';
-import {createGameUI} from './game-ui.js?v=20260927-guides1';
+import {createGraphEditor} from './graph-editor.js?v=20260927-local1';
+import {validateGraph,TYPES} from './graph-core.js?v=20260927-local1';
+import {createGameInput} from './game-input.js?v=20260927-local1';
+import {createGameCamera} from './game-camera.js?v=20260927-local1';
+import {createGameUI} from './game-ui.js?v=20260927-local1';
 export function initGameStudio(bridge){
  const $=s=>document.querySelector(s),{objects}=bridge;
  const dialog=document.createElement('dialog');dialog.id='code-dialog';dialog.setAttribute('aria-labelledby','code-title');
@@ -38,7 +38,7 @@ export function initGameStudio(bridge){
  if(running)return;layoutEditor.close();let graph;try{graph=graphEditor.validate();}catch(e){notice(e.message);$('#status').textContent=e.message;dialog.showModal();graphEditor.trace([],[],e.nodeId,e.message);return;}
  oldSelection=bridge.getSelected();objects.forEach(bridge.centerPivot);before=objects.map(o=>{const colors=[];o.traverse(m=>{if(m.isMesh)colors.push(m.material.color.getHex());});return{position:o.position.toArray(),rotation:o.rotation.toArray(),scale:o.scale.toArray(),visible:o.visible,colors};});cameraState={position:bridge.camera.position.clone(),target:bridge.orbit.target.clone(),orbitEnabled:bridge.orbit.enabled};
  bridge.select(null);bridge.setEditing(false);dialog.close();running=true;$('#status').textContent='プレイ中 — Escで停止';hud.hidden=false;$('#game-score').textContent='得点：0';$('#game-message').textContent='ゲーム開始';$('#play-game').hidden=true;$('#stop-game').hidden=false;bridge.orbit.enabled=false;gameInput.start();gameCamera.start(graph,gameInput.heldKeys);gameUI.mount(layoutEditor.save());debug.hidden=false;debug.querySelector('pre').textContent='まだ変数はありません';
- worker=new Worker(new URL('./game-worker.js?v=20260927-guides1',import.meta.url),{type:'module'});
+ worker=new Worker(new URL('./game-worker.js?v=20260927-local1',import.meta.url),{type:'module'});
  worker.onerror=e=>stop('実行エラー：'+e.message);
  worker.onmessage=({data})=>{if(!running)return;clearTimeout(timer);if(data.type==='error'){stop('ノードの実行エラー：'+data.message);notice(data.message);dialog.showModal();graphEditor.trace(data.trace,data.traceEdges,data.nodeId,data.message);return;}graphEditor.trace(data.trace??[],data.traceEdges??[]);let commandNode;try{for(const {type,args,nodeId}of data.commands){commandNode=nodeId;const o=objects[args[0]-1];if(gameUI.apply(type,args))continue;if(type==='clone'){const clone=bridge.decode(bridge.encode(o));clone.position.add(new T.Vector3(...args.slice(2)));bridge.scene.add(clone);objects.push(clone);bridge.refreshCount();continue;}if(type==='score')$('#game-score').textContent='得点：'+args[0];else if(type==='say')$('#game-message').textContent=args[0];else if(o){if(type==='move'){const delta=(graph.nodes.find(n=>n.type==='setup')?.params.collision??true)?collisionDelta(state(),args[0]-1,args.slice(1)):args.slice(1);gameMotion.moved(o,delta);o.position.add(new T.Vector3(...delta));}if(type==='position'){const requested=args.slice(1).map((v,i)=>v-o.position.getComponent(i));const delta=(graph.nodes.find(n=>n.type==='setup')?.params.collision??true)?collisionDelta(state(),args[0]-1,requested):requested;gameMotion.moved(o,delta);o.position.add(new T.Vector3(...delta));}if(type==='rotate')for(const [i,a]of ['x','y','z'].entries())o.rotation[a]+=T.MathUtils.degToRad(args[i+1]);if(type==='visible')o.visible=args[1];if(type==='color')o.traverse(m=>{if(m.isMesh)m.material.color.set(args[1]);});}}}catch(e){stop('実行エラー：'+e.message);notice(e.message);dialog.showModal();graphEditor.trace([],[],commandNode,e.message);return;}debug.querySelector('pre').textContent=Object.entries(data.variables??{}).map(([name,value])=>name+' = '+String(value)).join('\n')||'まだ変数はありません';busy=false;};
  dispatch({type:'init',graph});last=performance.now();tickTimer=setInterval(()=>{if(busy)return;const now=performance.now(),dt=Math.min((now-last)/1000,.1);last=now;dispatch({type:'tick',dt});},33);

@@ -1,6 +1,6 @@
-import {collisionDelta,collidersTouch,rotateCollider} from './game-collision.js?v=20260927-guides1';
-import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-guides1';
-export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-guides1';
+import {collisionDelta,collidersTouch,rotateCollider} from './game-collision.js?v=20260927-local1';
+import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-local1';
+export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-local1';
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const binding=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function checkValue(v){if(binding(v)){if(!['variable','event','object','timer','player_direction'].includes(v.source))throw Error('値の参照先が不正です');if(['variable','timer'].includes(v.source)&&(typeof v.name!=='string'||!v.name.length||v.name.length>64))throw Error('変数名を指定してください');if(v.source==='player_direction'&&!['x','y','z'].includes(v.field))throw Error('プレイヤーの向きのX・Y・Zを選んでください');if(v.source==='event'&&!CONTEXT.some(([,key])=>key===v.field))throw Error('イベントの値を選んでください');if(v.source==='object'&&(!Number.isInteger(v.target)||v.target===0||v.target< -3||!['x','y','z'].includes(v.field)))throw Error('形の座標の参照が不正です');}else if(!['number','string','boolean'].includes(typeof v)||typeof v==='number'&&(!Number.isFinite(v)||Math.abs(v)>1e9)||typeof v==='string'&&v.length>500)throw Error('値が不正です（文字は500字以内）');}
@@ -60,7 +60,7 @@ export class GraphRuntime{
   if(n.type==='repeat'){const count=this.number(p.count,ctx);if(!Number.isInteger(count)||count<0||count>1000)throw Error('繰り返し回数は0〜1000の整数です');push(next);for(let i=count-1;i>=0;i--)push(this.links.get(n.id+':body'),{...ctx,index:i});continue;}
   if(n.type==='wait'){const seconds=this.number(p.seconds,ctx);if(seconds<0||seconds>86400)throw Error('待機秒数は0〜86400です');push(next);if(job.stack.length){if(this.pending.length>=500)throw Error('待機中の処理が多すぎます');this.pending.push({time:this.time+Math.max(.001,seconds),stack:job.stack});}break;}
   if(n.type==='call'){push(next);const fn=this.functions.get(p.name);const depth=(ctx.depth??0)+1;if(depth>32)throw Error('関数の呼び出しが深すぎます');push(fn.id,{...ctx,value:this.value(p.value,ctx),depth});continue;}
-  if(['move','rotate','position','clone'].includes(n.type)){const id=this.target(p.target,ctx),o=this.object(id),v=['x','y','z'].map(k=>this.number(p[k],ctx)*(p.perSecond&&n.type!=='position'?this.dt:1));if(n.type==='clone'){if(this.world.length>=1000)throw Error('形は1000個までです');const copy=structuredClone(o);for(const prop of ['position','min','max'])copy[prop]=copy[prop].map((x,i)=>x+v[i]);this.world.push(copy);const created=this.world.length;ctx.created=created;this.emit('clone',id,created,...v);trigger('created',{target:created,created,source:id});}else{if(n.type==='rotate'){rotateCollider(o,v);this.emit(n.type,id,...v);}else{const requested=n.type==='move'?v:v.map((x,i)=>x-o.position[i]);const delta=this.collision?collisionDelta(this.world,id-1,requested):requested;this.emit('move',id,...delta);for(const prop of ['position','min','max'])o[prop]=o[prop].map((x,i)=>x+delta[i]);}}}
+  if(['move','rotate','position','clone'].includes(n.type)){const id=this.target(p.target,ctx),o=this.object(id),v=['x','y','z'].map(k=>this.number(p[k],ctx)*(p.perSecond&&n.type!=='position'?this.dt:1));if(n.type==='clone'){if(this.world.length>=1000)throw Error('形は1000個までです');const copy=structuredClone(o);for(const prop of ['position','min','max'])copy[prop]=copy[prop].map((x,i)=>x+v[i]);this.world.push(copy);const created=this.world.length;ctx.created=created;this.emit('clone',id,created,...v);trigger('created',{target:created,created,source:id});}else{if(n.type==='rotate'){rotateCollider(o,v);this.emit(n.type,id,...v);}else{const requested=n.type==='move'?(p.space==='local'?this.localMovement(id,v):v):v.map((x,i)=>x-o.position[i]);const delta=this.collision?collisionDelta(this.world,id-1,requested):requested;this.emit('move',id,...delta);for(const prop of ['position','min','max'])o[prop]=o[prop].map((x,i)=>x+delta[i]);}}}
   else if(n.type==='color')this.emit('color',this.target(p.target,ctx),p.color);
   else if(['hide','show'].includes(n.type)){const id=this.target(p.target,ctx);this.object(id).visible=n.type==='show';this.emit('visible',id,n.type==='show');}
   else if(n.type==='score'){this.score+=this.number(p.amount,ctx);this.emit('score',this.score);}
@@ -80,6 +80,14 @@ export class GraphRuntime{
  object(id){const o=this.world[id-1];if(!o)throw Error('対象の形がありません');return o;}
  target(id,ctx){const resolved=id===-1?ctx.target:id===-2?ctx.other:id===-3?ctx.created:id;this.object(resolved);return resolved;}
  num(v){const n=Number(v);if(!Number.isFinite(n)||Math.abs(n)>1e9)throw Error('計算結果が大きすぎるか、数値ではありません');return n;}
+ localMovement(id,values){
+ const setup=this.graph.nodes.find(n=>n.type==='setup')?.params,axis=setup?.player===id?setup.forward:'-z';
+ const front=({'-z':[0,0,-1],'+z':[0,0,1],'+x':[1,0,0],'-x':[-1,0,0]})[axis??'-z'];
+ // User convention: positive X is left, negative Z is forward. Unit basis ignores scale.
+ const [x,y,z]=values,p=[front[2]*x-front[0]*z,y,-front[0]*x-front[2]*z],r=this.object(id).rotation??[0,0,0];
+ for(const axis of [2,1,0]){const i=(axis+1)%3,j=(axis+2)%3,c=Math.cos(r[axis]),s=Math.sin(r[axis]),a=p[i],b=p[j];p[i]=a*c-b*s;p[j]=a*s+b*c;}
+ return p.map(v=>Math.abs(v)<1e-12?0:v);
+ }
  number(v,ctx){return this.num(this.value(v,ctx));}
  value(v,ctx){if(!binding(v))return v;if(v.source==='player_direction'){const setup=this.graph.nodes.find(n=>n.type==='setup')?.params;if(!setup?.player)throw Error('最初の定義でプレイヤーを選んでください');const o=this.object(setup.player),p=({'-z':[0,0,-1],'+z':[0,0,1],'+x':[1,0,0],'-x':[-1,0,0]})[setup.forward??'-z'].slice(),r=o.rotation??[0,0,0];for(const axis of [2,1,0]){const i=(axis+1)%3,j=(axis+2)%3,c=Math.cos(r[axis]),s=Math.sin(r[axis]),a=p[i],b=p[j];p[i]=a*c-b*s;p[j]=a*s+b*c;}const result=p[['x','y','z'].indexOf(v.field)];return Math.abs(result)<1e-12?0:result;}if(v.source==='timer'){const timer=this.graph.nodes.find(n=>n.type==='timer'&&n.params.name===v.name);if(!timer)throw Error('タイマー「'+v.name+'」がありません');return Math.round((this.timerElapsed.get(timer.id)??0)*1000)/1000;}if(v.source==='variable')return this.vars.get(v.name)??0;if(v.source==='event')return v.field==='score'?this.score:v.field==='time'?this.time:v.field==='dt'?this.dt:ctx[v.field]??0;const id=this.target(v.target,ctx);return this.object(id).position[['x','y','z'].indexOf(v.field)];}
  setVar(name,value){checkValue(value);if(!this.vars.has(name)&&this.vars.size>=500)throw Error('変数は500個までです');const previous=this.vars.get(name);this.vars.set(name,value);if(previous!==value)this.trigger('variable_event',{name,value,previous});}
