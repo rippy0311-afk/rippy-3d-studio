@@ -1,8 +1,9 @@
+import {colliderState} from './game-collider.js?v=20260926-collider1';
 import * as T from 'three';
-import {collisionDelta} from './game-collision.js?v=20260926-uiselect1';
+import {collisionDelta} from './game-collision.js?v=20260926-collider1';
 export function createCharacterMotion(objects){
  const states=new Map(),ray=new T.Raycaster(),normalMatrix=new T.Matrix3();
- function world(){return objects.map(o=>{o.updateWorldMatrix(true,true);const box=new T.Box3().setFromObject(o);return {visible:o.visible,min:box.min.toArray(),max:box.max.toArray()};});}
+ function world(){return objects.map(colliderState);}
  function support(object,x,z,foot,up,down,config){
   ray.set(new T.Vector3(x,foot+up+.002,z),new T.Vector3(0,-1,0));ray.far=up+down+.004;
   const targets=objects.filter(o=>o!==object&&o.visible);targets.forEach(o=>o.updateWorldMatrix(true,true));
@@ -16,7 +17,7 @@ export function createCharacterMotion(objects){
   for(let i=0;i<steps;i++){
    let boxes=world(),foot=boxes[index].min[1];
    const below=config.collision?support(object,object.position.x,object.position.z,foot,.01,.04,config):null;
-   state.grounded=!!below&&Math.abs(foot-below.y)<.045&&state.velocity<=0;
+   state.grounded=!!below&&Math.abs(foot-below.y)<.045&&state.velocity<=0||state.grounded&&state.velocity===0;
    if(i===0&&jump&&config.jumpOn&&state.grounded){state.velocity=config.jumpSpeed;state.grounded=false;}
    const dx=delta.x/steps,dz=delta.z/steps;
    const leadX=dx?Math.sign(dx)*((boxes[index].max[0]-boxes[index].min[0])/2+.03):0,leadZ=dz?Math.sign(dz)*((boxes[index].max[2]-boxes[index].min[2])/2+.03):0;
