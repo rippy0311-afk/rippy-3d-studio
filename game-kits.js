@@ -1,6 +1,6 @@
 import * as T from 'three';
-import {validateGraph,TYPES} from './graph-core.js?v=20260927-nodegrid1';
-import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-nodegrid1';
+import {validateGraph,TYPES} from './graph-core.js?v=20260927-guides1';
+import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-guides1';
 export function validateKit(data){
  if(!data||data.format!=='rippy-kit'||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>1000)throw Error('部品セットのファイルを選んでください');
  return {...structuredClone(data),graph:validateGraph(data.graph,data.items.length),uiLayout:validateUILayout(data.uiLayout)};
@@ -16,7 +16,7 @@ export function mergeKit(existing,kit,prefix){
   }
   return n;
  });
- const graph=validateGraph({nodes:[...existing.graph.nodes,...nodes],edges:[...existing.graph.edges,...kit.graph.edges.map(e=>({...e,from:prefix+e.from,to:prefix+e.to}))]},offset+kit.items.length);
+ const graph=validateGraph({...existing.graph,nodes:[...existing.graph.nodes,...nodes],edges:[...existing.graph.edges,...kit.graph.edges.map(e=>({...e,from:prefix+e.from,to:prefix+e.to}))]},offset+kit.items.length);
  const uiLayout=structuredClone(existing.uiLayout??[]);for(const ui of kit.uiLayout){const placed=freeUIPosition({...ui,id:rename(ui.id)},uiLayout);if(!placed)throw Error('部品セットのUIを置く空きがありません');uiLayout.push(placed);}validateUILayout(uiLayout);
  return {items:[...existing.items,...kit.items],graph,uiLayout};
 }

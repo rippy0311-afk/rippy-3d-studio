@@ -1,12 +1,14 @@
-import {collisionDelta,collidersTouch,rotateCollider} from './game-collision.js?v=20260927-nodegrid1';
-import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-nodegrid1';
-export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-nodegrid1';
+import {collisionDelta,collidersTouch,rotateCollider} from './game-collision.js?v=20260927-guides1';
+import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-guides1';
+export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-guides1';
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const binding=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function checkValue(v){if(binding(v)){if(!['variable','event','object','timer','player_direction'].includes(v.source))throw Error('値の参照先が不正です');if(['variable','timer'].includes(v.source)&&(typeof v.name!=='string'||!v.name.length||v.name.length>64))throw Error('変数名を指定してください');if(v.source==='player_direction'&&!['x','y','z'].includes(v.field))throw Error('プレイヤーの向きのX・Y・Zを選んでください');if(v.source==='event'&&!CONTEXT.some(([,key])=>key===v.field))throw Error('イベントの値を選んでください');if(v.source==='object'&&(!Number.isInteger(v.target)||v.target===0||v.target< -3||!['x','y','z'].includes(v.field)))throw Error('形の座標の参照が不正です');}else if(!['number','string','boolean'].includes(typeof v)||typeof v==='number'&&(!Number.isFinite(v)||Math.abs(v)>1e9)||typeof v==='string'&&v.length>500)throw Error('値が不正です（文字は500字以内）');}
 export function validateGraph(input,count=Infinity){
  if(!input||!Array.isArray(input.nodes)||!Array.isArray(input.edges)||input.nodes.length>300||input.edges.length>600)throw Error('ノードは300個までです。正しい保存ファイルを選んでください。');
  const graph=structuredClone(input),ids=new Map();
+ if(graph.guides!==undefined){if(!Array.isArray(graph.guides)||graph.guides.length>300)throw Error('背景の点線は300本までです');for(const line of graph.guides){if(!line||!['purple','orange','blue','green'].includes(line.color)||!['x1','y1','x2','y2'].every(k=>Number.isFinite(line[k])&&line[k]>=0&&line[k]<=10000&&line[k]%20===0))throw Error('背景の点線のデータが不正です');}}
+
  for(const n of graph.nodes){try{if(typeof n.id!=='string'||n.id.length>80||ids.has(n.id)||!own(TYPES,n.type)||!Number.isFinite(n.x)||!Number.isFinite(n.y)||Math.abs(n.x)>10000||Math.abs(n.y)>10000)throw Error('不正なノードです');ids.set(n.id,n);const def=TYPES[n.type];n.params={...def.defaults,...n.params};const p=n.params;
  for(const field of def.fields){const v=p[field.key];if(['number','value'].includes(field.kind)){checkValue(v);if(field.kind==='number'&&!binding(v)&&(!Number.isFinite(v)||Math.abs(v)>100000))throw Error('数値は -100000〜100000 にしてください');}
  else if(field.kind==='setting'&&(!Number.isFinite(v)||v<0||v>1000||['distance','sensitivity'].includes(field.key)&&v<=0))throw Error('初期設定の数値は0〜1000（距離と感度は0より大きい値）です');

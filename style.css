@@ -36,3 +36,5 @@ body.ui-designing .inspector>:not(#ui-inspector){display:none}body.ui-designing 
 /* Node positions and outer dimensions share the same 20px editing grid. */
 .graph-canvas{background-image:linear-gradient(#35435866 1px,transparent 1px),linear-gradient(90deg,#35435866 1px,transparent 1px),linear-gradient(#52638166 1px,transparent 1px),linear-gradient(90deg,#52638166 1px,transparent 1px);background-size:20px 20px,20px 20px,100px 100px,100px 100px;background-position:0 0;}
 .graph-node{width:260px;}
+
+.graph-guides{position:absolute;inset:0;pointer-events:none;overflow:visible}.guide-line{fill:none;stroke-width:3;stroke-dasharray:8 6;stroke-linecap:round;pointer-events:none}#node-editor[data-guide-tool="erase"] .guide-line{pointer-events:stroke;cursor:crosshair;stroke-width:7}.graph-tools select{max-width:145px;background:#131c2b;color:#eef2ff;border:1px solid #526381;border-radius:5px;padding:5px}#node-editor[data-guide-tool="purple"] .graph-scroll,#node-editor[data-guide-tool="orange"] .graph-scroll,#node-editor[data-guide-tool="blue"] .graph-scroll,#node-editor[data-guide-tool="green"] .graph-scroll{cursor:crosshair}
