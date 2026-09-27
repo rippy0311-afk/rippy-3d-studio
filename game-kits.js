@@ -1,6 +1,6 @@
 import * as T from 'three';
-import {validateGraph,TYPES} from './graph-core.js?v=20260927-nodegap1';
-import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-nodegap1';
+import {validateGraph,TYPES} from './graph-core.js?v=20260927-nodegrid1';
+import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-nodegrid1';
 export function validateKit(data){
  if(!data||data.format!=='rippy-kit'||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>1000)throw Error('部品セットのファイルを選んでください');
  return {...structuredClone(data),graph:validateGraph(data.graph,data.items.length),uiLayout:validateUILayout(data.uiLayout)};

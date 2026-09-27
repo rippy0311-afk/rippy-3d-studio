@@ -1,4 +1,4 @@
-import {UI_KINDS,validateUILayout,placeUI,overlapsUI,freeUIPosition} from './ui-layout.js?v=20260927-nodegap1';
+import {UI_KINDS,validateUILayout,placeUI,overlapsUI,freeUIPosition} from './ui-layout.js?v=20260927-nodegrid1';
 export function createUILayoutEditor(viewport,inspector,onToggle,onSave=()=>{}){
  let items=[],selected=null,active=false,history=[],drag=null;
  const layer=document.createElement('div');layer.id='ui-design-layer';layer.hidden=true;viewport.append(layer);
