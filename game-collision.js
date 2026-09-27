@@ -76,3 +76,11 @@ export function rotateCollider(o,degrees){
  for(const t of o.triangles)for(const p of t){for(const i of [0,1,2])turn(p,i,-old[i]);for(const i of [2,1,0])turn(p,i,next[i]);for(let i=0;i<3;i++){o.min[i]=Math.min(o.min[i],p[i]+o.position[i]);o.max[i]=Math.max(o.max[i],p[i]+o.position[i]);}}
  o.rotation=next;
 }
+
+// Test penetration separately from contact: a resting floor contact must allow turning.
+export function collidersPenetrate(a,b){
+ const center=a.min.map((v,i)=>(v+a.max[i])/2),factor=1-1e-6;
+ const inner={...a,min:a.min.map((v,i)=>center[i]+(v-center[i])*factor),max:a.max.map((v,i)=>center[i]+(v-center[i])*factor)};
+ if(a.triangles)inner.triangles=a.triangles.map(t=>t.map(p=>p.map((v,i)=>{const origin=a.position?.[i]??0;return center[i]+(v+origin-center[i])*factor-origin;})));
+ return collidersTouch(inner,b);
+}
