@@ -1,6 +1,6 @@
-import {colliderState} from './game-collider.js?v=20260927-wallfix1';
+import {colliderState} from './game-collider.js?v=20260927-nodegap1';
 import * as T from 'three';
-import {collisionDelta} from './game-collision.js?v=20260927-wallfix1';
+import {collisionDelta} from './game-collision.js?v=20260927-nodegap1';
 export function createCharacterMotion(objects){
  const states=new Map(),ray=new T.Raycaster(),normalMatrix=new T.Matrix3();
  function world(){return objects.map(colliderState);}

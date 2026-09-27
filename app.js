@@ -1,10 +1,10 @@
-import {initGameStudio} from './game-studio.js?v=20260927-wallfix1';
+import {initGameStudio} from './game-studio.js?v=20260927-nodegap1';
 import * as T from 'three';
-import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260927-wallfix1';
-import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260927-wallfix1';
-import {subtractObjects} from './solid-subtract.js?v=20260927-wallfix1';
-import {makeSweep} from './sweep-geometry.js?v=20260927-wallfix1';
-import {makeRevolve} from './revolve-geometry.js?v=20260927-wallfix1';
+import {centerPivot,offsetGeometry} from './center-pivot.js?v=20260927-nodegap1';
+import {validateFace,makeExtrusion} from './sketch-geometry.js?v=20260927-nodegap1';
+import {subtractObjects} from './solid-subtract.js?v=20260927-nodegap1';
+import {makeSweep} from './sweep-geometry.js?v=20260927-nodegap1';
+import {makeRevolve} from './revolve-geometry.js?v=20260927-nodegap1';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {TransformControls} from 'three/addons/controls/TransformControls.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
