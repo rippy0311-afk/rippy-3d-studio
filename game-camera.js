@@ -1,7 +1,7 @@
-import {createCharacterMotion} from './game-character.js?v=20260926-studio1';
-import {collisionDelta} from './game-collision.js?v=20260926-studio1';
+import {createCharacterMotion} from './game-character.js?v=20260926-uiselect1';
+import {collisionDelta} from './game-collision.js?v=20260926-uiselect1';
 import * as T from 'three';
-import {TYPES} from './graph-schema.js?v=20260926-studio1';
+import {TYPES} from './graph-schema.js?v=20260926-uiselect1';
 export function createGameCamera(canvas,objects,camera,orbit){
  let active=false,config,drag=null,frame=0,yaw=0,pitch=.25,distance=6,saved,hiddenLayers=[],readKeys=()=>[],lastFrame=null;
  const character=createCharacterMotion(objects);let jumpHeld=false;

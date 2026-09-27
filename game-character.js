@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {collisionDelta} from './game-collision.js?v=20260926-studio1';
+import {collisionDelta} from './game-collision.js?v=20260926-uiselect1';
 export function createCharacterMotion(objects){
  const states=new Map(),ray=new T.Raycaster(),normalMatrix=new T.Matrix3();
  function world(){return objects.map(o=>{o.updateWorldMatrix(true,true);const box=new T.Box3().setFromObject(o);return {visible:o.visible,min:box.min.toArray(),max:box.max.toArray()};});}
