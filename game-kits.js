@@ -1,6 +1,6 @@
 import * as T from 'three';
-import {validateGraph,TYPES} from './graph-core.js?v=20260927-local1';
-import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-local1';
+import {validateGraph,TYPES} from './graph-core.js?v=20260927-definitions1';
+import {validateUILayout,freeUIPosition} from './ui-layout.js?v=20260927-definitions1';
 export function validateKit(data){
  if(!data||data.format!=='rippy-kit'||data.version!==1||!Array.isArray(data.items)||!data.items.length||data.items.length>1000)throw Error('部品セットのファイルを選んでください');
  return {...structuredClone(data),graph:validateGraph(data.graph,data.items.length),uiLayout:validateUILayout(data.uiLayout)};
@@ -10,7 +10,7 @@ export function mergeKit(existing,kit,prefix){
  if(offset+kit.items.length>1000)throw Error('形は1000個までです');
  const rename=v=>v==='*'?v:prefix+v;
  const nodes=kit.graph.nodes.map(node=>{const n=structuredClone(node);n.id=prefix+n.id;n.x=Math.min(3500,n.x+60);n.y=Math.min(2000,n.y+60);
-  if(n.type==='setup'&&hasSetup){n.type='start';n.params={};return n;}
+  if(TYPES[n.type].singleton&&existing.graph.nodes.some(v=>v.type===n.type)){n.type='start';n.params={};return n;}
   for(const field of TYPES[n.type].fields){const k=field.key,v=n.params[k];if(['target','eventTarget','playerTarget'].includes(field.kind)&&v>0)n.params[k]=v+offset;else if(field.kind==='targets')n.params[k]=v.map(id=>id+offset);else if(v&&typeof v==='object'){if(v.source==='object')v.target=v.target>0?v.target+offset:v.target;if(['variable','timer'].includes(v.source))v.name=rename(v.name);}
    if(['name','ui'].includes(k)&&typeof v==='string')n.params[k]=rename(v);
   }
@@ -49,7 +49,7 @@ export function makeGameTemplate(kind){
   const won=add('condition_event',{condition:'score',amount:5,mode:'once'},1050,950),say=add('say',{text:'すべての的を倒した！'},1400,950);link(won,say);
  }
  if(['race','parkour'].includes(kind)){const goal=shape('ゴール',[0,kind==='parkour'?2.5:1,-18],[4,3,1],0xf8cb5a),e=add('collision',{target:player,other:goal,phase:'enter'},1050,950),say=add('say',{text:'ゴール！ おめでとう！'},1400,950);link(e,say);}
- let slot=0;for(const n of nodes){if(n.type==='setup')continue;n.x=400+(slot%7)*430;n.y=40+Math.floor(slot/7)*520;slot++;}
+ let slot=0;for(const n of nodes){if(TYPES[n.type].singleton)continue;n.x=400+(slot%7)*430;n.y=40+Math.floor(slot/7)*520;slot++;}
  return {items,graph:validateGraph({nodes,edges},items.length),uiLayout:[]};
 }
 
@@ -57,13 +57,13 @@ export function captureKit(scene,selectedIds){
  if(!selectedIds)return {format:'rippy-kit',version:1,...structuredClone(scene)};
  const ids=new Set(selectedIds),graph=validateGraph(scene.graph,scene.items.length),picked=new Set();
  const references=n=>{const refs=[];for(const f of TYPES[n.type].fields){const v=n.params[f.key];if(['target','eventTarget','playerTarget'].includes(f.kind)&&v>0)refs.push(v);if(f.kind==='targets')refs.push(...v);if(v?.source==='object'&&v.target>0)refs.push(v.target);}return refs;};
- let changed=true;while(changed){changed=false;for(const n of graph.nodes){if(n.type==='setup')continue;const connected=graph.edges.some(e=>e.from===n.id&&picked.has(e.to)||e.to===n.id&&picked.has(e.from));if(!picked.has(n.id)&&(connected||references(n).some(id=>ids.has(id)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
-  for(const n of graph.nodes){if(n.type==='setup'||picked.has(n.id))continue;const names=node=>{const a=[];if(typeof node.params.name==='string')a.push(node.params.name);for(const v of Object.values(node.params))if(v&&['variable','timer'].includes(v.source))a.push(v.name);return a;};if([...picked].some(id=>names(graph.nodes.find(n=>n.id===id)).some(name=>names(n).includes(name)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
+ let changed=true;while(changed){changed=false;for(const n of graph.nodes){if(TYPES[n.type].singleton)continue;const connected=graph.edges.some(e=>e.from===n.id&&picked.has(e.to)||e.to===n.id&&picked.has(e.from));if(!picked.has(n.id)&&(connected||references(n).some(id=>ids.has(id)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
+  for(const n of graph.nodes){if(TYPES[n.type].singleton||picked.has(n.id))continue;const names=node=>{const a=[];if(typeof node.params.name==='string')a.push(node.params.name);for(const v of Object.values(node.params))if(v&&['variable','timer'].includes(v.source))a.push(v.name);return a;};if([...picked].some(id=>names(graph.nodes.find(n=>n.id===id)).some(name=>names(n).includes(name)))){picked.add(n.id);references(n).forEach(id=>ids.add(id));changed=true;}}
  }
  const order=[...ids].sort((a,b)=>a-b),mapping=new Map(order.map((id,i)=>[id,i+1]));const nodes=graph.nodes.filter(n=>picked.has(n.id));
  for(const n of nodes)for(const f of TYPES[n.type].fields){const v=n.params[f.key];if(['target','eventTarget','playerTarget'].includes(f.kind)&&v>0)n.params[f.key]=mapping.get(v);if(v?.source==='object'&&v.target>0)v.target=mapping.get(v.target);}
  // Setup execution outputs become a start event, without replacing the destination game's player.
- const roots=graph.edges.filter(e=>graph.nodes.find(n=>n.id===e.from)?.type==='setup'&&picked.has(e.to));
+ const roots=graph.edges.filter(e=>TYPES[graph.nodes.find(n=>n.id===e.from)?.type]?.singleton&&picked.has(e.to));
  if(roots.length){nodes.push({id:'kit-start',type:'start',x:40,y:40,params:{}});roots.forEach(e=>e.from='kit-start');picked.add('kit-start');}
  const uiIds=new Set(nodes.map(n=>n.params.ui).filter(Boolean));
  return validateKit({format:'rippy-kit',version:1,items:order.map(id=>structuredClone(scene.items[id-1])),graph:{nodes,edges:graph.edges.filter(e=>picked.has(e.from)&&picked.has(e.to))},uiLayout:(scene.uiLayout??[]).filter(i=>uiIds.has(i.id)||uiIds.has('*'))});

@@ -1,6 +1,6 @@
-import {collisionDelta,collidersTouch,rotateCollider} from './game-collision.js?v=20260927-local1';
-import {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-local1';
-export {TYPES,KEYS,CONTEXT,outputs} from './graph-schema.js?v=20260927-local1';
+import {collisionDelta,collidersTouch,rotateCollider} from './game-collision.js?v=20260927-definitions1';
+import {TYPES,KEYS,CONTEXT,outputs,resolveSetup} from './graph-schema.js?v=20260927-definitions1';
+export {TYPES,KEYS,CONTEXT,outputs,resolveSetup} from './graph-schema.js?v=20260927-definitions1';
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const binding=v=>v&&typeof v==='object'&&!Array.isArray(v);
 function checkValue(v){if(binding(v)){if(!['variable','event','object','timer','player_direction'].includes(v.source))throw Error('値の参照先が不正です');if(['variable','timer'].includes(v.source)&&(typeof v.name!=='string'||!v.name.length||v.name.length>64))throw Error('変数名を指定してください');if(v.source==='player_direction'&&!['x','y','z'].includes(v.field))throw Error('プレイヤーの向きのX・Y・Zを選んでください');if(v.source==='event'&&!CONTEXT.some(([,key])=>key===v.field))throw Error('イベントの値を選んでください');if(v.source==='object'&&(!Number.isInteger(v.target)||v.target===0||v.target< -3||!['x','y','z'].includes(v.field)))throw Error('形の座標の参照が不正です');}else if(!['number','string','boolean'].includes(typeof v)||typeof v==='number'&&(!Number.isFinite(v)||Math.abs(v)>1e9)||typeof v==='string'&&v.length>500)throw Error('値が不正です（文字は500字以内）');}
@@ -22,14 +22,14 @@ export function validateGraph(input,count=Infinity){
  }
  }catch(error){error.nodeId=n.id;throw error;}
  }
- if(graph.nodes.filter(n=>n.type==='setup').length>1)throw Error('最初の定義は1個だけ配置してください');
+ const singletons=new Set();for(const n of graph.nodes){if(!TYPES[n.type].singleton)continue;if(singletons.has(n.type)){const error=new Error(TYPES[n.type].name+'は1個だけ配置してください');error.nodeId=n.id;throw error;}singletons.add(n.type);}
  const used=new Set();for(const e of graph.edges){if(!ids.has(e.from)||!ids.has(e.to)||TYPES[ids.get(e.to).type].event||!outputs(ids.get(e.from)).includes(e.port)||used.has(JSON.stringify([e.from,e.port,e.to])))throw Error('接続が不正です');used.add(JSON.stringify([e.from,e.port,e.to]));}
  const active=new Set(),done=new Set();function visit(id){if(active.has(id))throw Error('線が一周しています。「くり返す」か「毎フレーム」を使ってください。');if(done.has(id))return;active.add(id);for(const e of graph.edges.filter(e=>e.from===id))visit(e.to);active.delete(id);done.add(id);}for(const id of ids.keys())visit(id);
  const names=new Set();for(const n of graph.nodes.filter(n=>n.type==='function')){if(names.has(n.params.name))throw Error('同じ名前の関数があります');names.add(n.params.name);}for(const n of graph.nodes.filter(n=>n.type==='call'))if(!names.has(n.params.name))throw Error('関数「'+n.params.name+'」を定義してください');
  return graph;
 }
 export class GraphRuntime{
- constructor(graph,count){this.graph=validateGraph(graph,count);this.nodes=new Map(this.graph.nodes.map(n=>[n.id,n]));this.links=new Map();for(const e of this.graph.edges){const key=e.from+':'+e.port;this.links.set(key,[...(this.links.get(key)??[]),e.to]);}this.collision=this.graph.nodes.find(n=>n.type==='setup')?.params.collision??true;this.score=0;this.vars=new Map();this.time=0;this.pending=[];this.previous=new Map();this.timerNext=new Map();this.timerElapsed=new Map();this.disabledTimers=new Set();this.prompts=new Set();this.promptSerial=0;this.functions=new Map(this.graph.nodes.filter(n=>n.type==='function').map(n=>[n.params.name,n]));}
+ constructor(graph,count){this.graph=validateGraph(graph,count);this.nodes=new Map(this.graph.nodes.map(n=>[n.id,n]));this.links=new Map();for(const e of this.graph.edges){const key=e.from+':'+e.port;this.links.set(key,[...(this.links.get(key)??[]),e.to]);}this.collision=resolveSetup(this.graph).collision;this.score=0;this.vars=new Map();this.time=0;this.pending=[];this.previous=new Map();this.timerNext=new Map();this.timerElapsed=new Map();this.disabledTimers=new Set();this.prompts=new Set();this.promptSerial=0;this.functions=new Map(this.graph.nodes.filter(n=>n.type==='function').map(n=>[n.params.name,n]));}
  run(event,input){
  const {world,keys=[],dt=0}=input;this.world=structuredClone(world);this.keys=new Set(keys);this.dt=Math.max(0,Math.min(Number(dt)||0,.25));if(event==='tick'){this.time+=this.dt;for(const n of this.graph.nodes)if(n.type==='timer'&&!this.disabledTimers.has(n.id))this.timerElapsed.set(n.id,(this.timerElapsed.get(n.id)??0)+this.dt);}this.commands=[];this.jobs=[];this.steps=0;this.trace=[];this.traceEdges=[];this.activeNode=null;
  const queue=(n,ctx={})=>{this.jobs.push({stack:[{id:n.id,ctx:{time:this.time,dt:this.dt,...ctx}}]});};this.queue=queue;
@@ -41,7 +41,7 @@ export class GraphRuntime{
  if(type==='pointer'&&(p.kind!==ctx.kind||p.target===-1&&!ctx.target||p.target>0&&p.target!==ctx.target||p.button!==-1&&p.button!==ctx.button))continue;
  queue(n,ctx);
  }};this.trigger=trigger;
- if(event==='start'){trigger('setup');trigger('start');this.world.forEach((_,i)=>trigger('created',{target:i+1,created:i+1}));}
+ if(event==='start'){trigger('setup');for(const type of Object.keys(TYPES).filter(t=>TYPES[t].setupKey))trigger(type);trigger('start');this.world.forEach((_,i)=>trigger('created',{target:i+1,created:i+1}));}
  else if(event==='tick'){
   const due=this.pending.filter(p=>p.time<=this.time);this.pending=this.pending.filter(p=>p.time>this.time);this.jobs.push(...due.map(p=>({stack:p.stack})));
   for(const e of input.events??[]){if(e.type==='answer'){if(!this.prompts.has(e.token))continue;this.prompts.delete(e.token);this.setVar(e.name,e.value);trigger('answer',e);if(!this.prompts.size)trigger('all_answers',e);}else trigger(e.type,e);}
@@ -81,7 +81,7 @@ export class GraphRuntime{
  target(id,ctx){const resolved=id===-1?ctx.target:id===-2?ctx.other:id===-3?ctx.created:id;this.object(resolved);return resolved;}
  num(v){const n=Number(v);if(!Number.isFinite(n)||Math.abs(n)>1e9)throw Error('計算結果が大きすぎるか、数値ではありません');return n;}
  localMovement(id,values){
- const setup=this.graph.nodes.find(n=>n.type==='setup')?.params,axis=setup?.player===id?setup.forward:'-z';
+ const setup=resolveSetup(this.graph),axis=setup?.player===id?setup.forward:'-z';
  const front=({'-z':[0,0,-1],'+z':[0,0,1],'+x':[1,0,0],'-x':[-1,0,0]})[axis??'-z'];
  // User convention: positive X is left, negative Z is forward. Unit basis ignores scale.
  const [x,y,z]=values,p=[front[2]*x-front[0]*z,y,-front[0]*x-front[2]*z],r=this.object(id).rotation??[0,0,0];
@@ -89,7 +89,7 @@ export class GraphRuntime{
  return p.map(v=>Math.abs(v)<1e-12?0:v);
  }
  number(v,ctx){return this.num(this.value(v,ctx));}
- value(v,ctx){if(!binding(v))return v;if(v.source==='player_direction'){const setup=this.graph.nodes.find(n=>n.type==='setup')?.params;if(!setup?.player)throw Error('最初の定義でプレイヤーを選んでください');const o=this.object(setup.player),p=({'-z':[0,0,-1],'+z':[0,0,1],'+x':[1,0,0],'-x':[-1,0,0]})[setup.forward??'-z'].slice(),r=o.rotation??[0,0,0];for(const axis of [2,1,0]){const i=(axis+1)%3,j=(axis+2)%3,c=Math.cos(r[axis]),s=Math.sin(r[axis]),a=p[i],b=p[j];p[i]=a*c-b*s;p[j]=a*s+b*c;}const result=p[['x','y','z'].indexOf(v.field)];return Math.abs(result)<1e-12?0:result;}if(v.source==='timer'){const timer=this.graph.nodes.find(n=>n.type==='timer'&&n.params.name===v.name);if(!timer)throw Error('タイマー「'+v.name+'」がありません');return Math.round((this.timerElapsed.get(timer.id)??0)*1000)/1000;}if(v.source==='variable')return this.vars.get(v.name)??0;if(v.source==='event')return v.field==='score'?this.score:v.field==='time'?this.time:v.field==='dt'?this.dt:ctx[v.field]??0;const id=this.target(v.target,ctx);return this.object(id).position[['x','y','z'].indexOf(v.field)];}
+ value(v,ctx){if(!binding(v))return v;if(v.source==='player_direction'){const setup=resolveSetup(this.graph);if(!setup?.player)throw Error('最初の定義でプレイヤーを選んでください');const o=this.object(setup.player),p=({'-z':[0,0,-1],'+z':[0,0,1],'+x':[1,0,0],'-x':[-1,0,0]})[setup.forward??'-z'].slice(),r=o.rotation??[0,0,0];for(const axis of [2,1,0]){const i=(axis+1)%3,j=(axis+2)%3,c=Math.cos(r[axis]),s=Math.sin(r[axis]),a=p[i],b=p[j];p[i]=a*c-b*s;p[j]=a*s+b*c;}const result=p[['x','y','z'].indexOf(v.field)];return Math.abs(result)<1e-12?0:result;}if(v.source==='timer'){const timer=this.graph.nodes.find(n=>n.type==='timer'&&n.params.name===v.name);if(!timer)throw Error('タイマー「'+v.name+'」がありません');return Math.round((this.timerElapsed.get(timer.id)??0)*1000)/1000;}if(v.source==='variable')return this.vars.get(v.name)??0;if(v.source==='event')return v.field==='score'?this.score:v.field==='time'?this.time:v.field==='dt'?this.dt:ctx[v.field]??0;const id=this.target(v.target,ctx);return this.object(id).position[['x','y','z'].indexOf(v.field)];}
  setVar(name,value){checkValue(value);if(!this.vars.has(name)&&this.vars.size>=500)throw Error('変数は500個までです');const previous=this.vars.get(name);this.vars.set(name,value);if(previous!==value)this.trigger('variable_event',{name,value,previous});}
  touching(a,b){const aa=this.object(a),bb=this.object(b);return collidersTouch(aa,bb);}
  condition(p,ctx){if(p.condition==='key')return p.key==='*'?!!this.keys.size:this.keys.has(p.key.toLowerCase());if(p.condition==='touching')return this.touching(this.target(p.target,ctx),this.target(p.other,ctx));if(p.condition==='score')return this.score>=this.number(p.amount,ctx);const a=this.value(p.a,ctx),b=this.value(p.b,ctx);switch(p.op){case'eq':return a===b;case'ne':return a!==b;case'gt':return this.num(a)>this.num(b);case'gte':return this.num(a)>=this.num(b);case'lt':return this.num(a)<this.num(b);case'lte':return this.num(a)<=this.num(b);case'and':return Boolean(a)&&Boolean(b);case'or':return Boolean(a)||Boolean(b);}return false;}
